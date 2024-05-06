@@ -2,9 +2,10 @@ import cv2
 import socket
 import pickle
 import struct
+import numpy as np
 
 # Server configuration
-SERVER_HOST = '0.0.0.0'  # Change to the IP address of the server
+SERVER_HOST = '127.0.0.1'  # Listen on all available interfaces
 SERVER_PORT = 3000
 
 # Socket creation
@@ -15,35 +16,36 @@ try:
 except socket.error as e:
     print(f"Error connecting to {SERVER_HOST}:{SERVER_PORT}: {e}")
 
-# Data receiving loop
-data = b''
-payload_size = struct.calcsize("L")
+# Open default camera (index 0)
+cap = cv2.VideoCapture(0) 
+cap1 = cv2.VideoCapture(1) 
+# cap = cv2.VideoCapture(0) 
+# add another video capture like the one above with a different ID for the two webcam setup
 
-while True:
-    # print("data received")
-    # Receive frame size
-    while len(data) < payload_size:
-        packet = client_socket.recv(1280*720)
-        if not packet: break
-        data += packet
-    packed_msg_size = data[:payload_size]
-    data = data[payload_size:]
-    msg_size = struct.unpack("L", packed_msg_size)[0]
+try:
+    while True:
+        # Capture frame from camera
+        ret, frame = cap.read()
+        ret1, frame1 = cap1.read()
+        joined_frame = np.concatenate((frame, frame1))
 
-    # Receive frame data
-    while len(data) < msg_size:
-        data += client_socket.recv(1280*720)
-    frame_data = data[:msg_size]
-    data = data[msg_size:]
+        # joined_frame = cv2.flip(joined_frame, 1) # for mirroring
+        # width  = cap.get(3) #1280
+        # height = cap.get(4) #720
+        # print(width)
+        # print(height)
 
-    # Deserialize frame
-    frame = pickle.loads(frame_data)
+        data = pickle.dumps(joined_frame)
+        
+        # Send frame size
+        message_size = struct.pack("L", len(data))
+        client_socket.sendall(message_size + data)
+    
+except KeyboardInterrupt:
+    print("[INFO] Keyboard interrupt received, closing connection...")
 
-    # Display the received frame
-    cv2.imshow('Received', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-# Close connection and cleanup
-client_socket.close()
-cv2.destroyAllWindows()
+finally:
+    # Release the camera and close connection
+    cap.release()
+    client_socket.close()
+    
