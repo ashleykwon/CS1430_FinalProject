@@ -6,7 +6,7 @@ import struct
 
 BUF_SIZE = 1280 * 720 * 2
 
-
+# TODO: Change this so that the server accepts two clients (one video frame from one client, two frames as a joined frame from the second client) 
 def receive_video():
     # Set up socket
     HOST = '0.0.0.0'

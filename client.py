@@ -3,7 +3,7 @@ import socket
 import struct
 
 def send_video():
-    HOST = '0.0.0.0'  # Replace with your server's IP address
+    HOST = '127.0.0.1'  # Replace with your server's IP address
     PORT = 9999
 
     # Connect to server
