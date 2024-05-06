@@ -13,17 +13,27 @@ def send_video():
     # Start video capture
     cap = cv2.VideoCapture(0)
 
+    # get frame size
+    ret, frame = cap.read()
+    w, h, c = frame.shape
+    data = frame.flatten().tobytes()
+    size = len(data)
+
+    client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size))
+
+    # send video
+
     try:
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
             data = frame.flatten().tobytes()
-            size = len(data)
-            client_socket.sendall(struct.pack("Q", size) + data)  # Prefix each message with a length (Q = unsigned long long)
+            client_socket.sendall(data)
     finally:
         cap.release()
         client_socket.close()
+
 
 if __name__ == '__main__':
     send_video()

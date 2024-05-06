@@ -3,6 +3,10 @@ import cv2
 import numpy as np
 import struct
 
+
+BUF_SIZE = 1280 * 720 * 2
+
+
 def receive_video():
     # Set up socket
     HOST = '0.0.0.0'
@@ -14,25 +18,35 @@ def receive_video():
     conn, addr = s.accept()
     print(f"Connected by {addr}")
 
-    # Receive data
-    data = b''
-    payload_size = struct.calcsize("Q")  # Unsigned long long
+    data = conn.recv(BUF_SIZE)
+    payload_size = struct.calcsize("Q")
+
+    w = struct.unpack("Q", data[:payload_size])[0]
+    data = data[payload_size:]
+
+    h = struct.unpack("Q", data[:payload_size])[0]
+    data = data[payload_size:]
+
+    c = struct.unpack("Q", data[:payload_size])[0]
+    data = data[payload_size:]
+
+    msg_size = struct.unpack("Q", data[:payload_size])[0]
+    data = data[payload_size:]
+
     try:
         while True:
-            while len(data) < payload_size:
-                data += conn.recv(4096)
-            packed_msg_size = data[:payload_size]
-            data = data[payload_size:]
-            msg_size = struct.unpack("Q", packed_msg_size)[0]
-
             while len(data) < msg_size:
-                data += conn.recv(4096)
+                data += conn.recv(BUF_SIZE)
             frame_data = data[:msg_size]
             data = data[msg_size:]
 
-            # Extract frame
             frame = np.frombuffer(frame_data, dtype=np.uint8)
-            frame = frame.reshape(1080, 1920, 3)  # TODO: encode shape in message
+            frame = frame.reshape(w, h, c)
+
+            # Process frame here
+
+            # Send frame back to client
+
             cv2.imshow('Received', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
