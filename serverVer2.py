@@ -4,7 +4,7 @@ import pickle
 import struct
 
 # Server configuration
-SERVER_HOST = '172.16.12.11'  # Listen on all available interfaces
+SERVER_HOST = '0.0.0.0'  # Listen on all available interfaces
 SERVER_PORT = 3000
 
 # Socket creation

@@ -4,7 +4,7 @@ import pickle
 import struct
 
 # Server configuration
-SERVER_HOST = '172.16.12.11'  # Change to the IP address of the server
+SERVER_HOST = '0.0.0.0'  # Change to the IP address of the server
 SERVER_PORT = 3000
 
 # Socket creation
