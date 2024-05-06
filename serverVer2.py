@@ -4,7 +4,7 @@ import pickle
 import struct
 
 # Server configuration
-SERVER_HOST = '0.0.0.0'  # Listen on all available interfaces
+SERVER_HOST = '127.0.0.1'  # Change to the IP address of the server
 SERVER_PORT = 3000
 
 # Socket creation
@@ -18,32 +18,38 @@ print("[INFO] Server started, waiting for clients...")
 client_socket, client_address = server_socket.accept()
 print(f"[INFO] Client connected: {client_address}")
 
-# Open default camera (index 0)
-cap = cv2.VideoCapture(0) 
-# add another video capture like the one above with a different ID for the two webcam setup
 
-try:
-    while True:
-        # Capture frame from camera
-        ret, frame = cap.read()
-        frame = cv2.flip(frame, 1) # for mirroring
-        # width  = cap.get(3) #1280
-        # height = cap.get(4) #720
-        # print(width)
-        # print(height)
+# Data receiving loop
+data = b''
+payload_size = struct.calcsize("L")
 
-        # Serialize frame
-        data = pickle.dumps(frame)
-        
-        # Send frame size
-        message_size = struct.pack("L", len(data))
-        client_socket.sendall(message_size + data)
-    
-except KeyboardInterrupt:
-    print("[INFO] Keyboard interrupt received, closing connection...")
+while True:
+    # print("data received")
+    # Receive frame size
+    while len(data) < payload_size:
+        packet = client_socket.recv(1280*720*2)
+        if not packet: break
+        data += packet
+    packed_msg_size = data[:payload_size]
+    data = data[payload_size:]
+    msg_size = struct.unpack("L", packed_msg_size)[0]
 
-finally:
-    # Release the camera and close connection
-    cap.release()
-    client_socket.close()
-    server_socket.close()
+    # Receive frame data
+    while len(data) < msg_size:
+        data += client_socket.recv(1280*720*2)
+    frame_data = data[:msg_size]
+    data = data[msg_size:]
+
+    # Deserialize frame
+    frame = pickle.loads(frame_data)
+
+    # Display the received frame
+    cv2.imshow('Received', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Close connection and cleanup
+client_socket.close()
+server_socket.close()
+cv2.destroyAllWindows()
+
