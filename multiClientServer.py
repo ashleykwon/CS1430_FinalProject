@@ -1,24 +1,15 @@
+from _thread import *
 import socket
+import sys
+import struct
 import cv2
 import numpy as np
-import struct
-from _thread import *
 
+# Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
 BUF_SIZE = 1280 * 720 * 2
 
-# TODO: Change this so that the server accepts two clients (one video frame from one client, two frames as a joined frame from the second client) 
-def receive_video():
-    # Set up socket
-    HOST = '0.0.0.0'
-    PORT = 9999
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((HOST, PORT))
-    s.listen(1)
-    print("Waiting for a connection...")
-    conn, addr = s.accept()
-    print(f"Connected by {addr}")
-
+def clientthread(conn):
     data = conn.recv(BUF_SIZE)
     payload_size = struct.calcsize("Q")
 
@@ -53,7 +44,30 @@ def receive_video():
                 break
     finally:
         conn.close()
-        s.close()
 
-if __name__ == '__main__':
-    receive_video()
+def main():
+    try:
+        host = '127.0.0.1'
+        port = 5000
+        tot_socket = 2
+        list_sock = []
+        for i in range(tot_socket):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+            s.bind((host, port+i))
+            s.listen(10)
+            list_sock.append(s)
+            print("[*] Server listening on %s %d" %(host, (port+i)))
+
+        while True:
+            for j in range(len(list_sock)):
+                conn, addr = list_sock[j].accept()
+                print('[*] Connected with ' + addr[0] + ':' + str(addr[1]))
+                start_new_thread(clientthread ,(conn,))
+        s.close()
+    except KeyboardInterrupt as msg:
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

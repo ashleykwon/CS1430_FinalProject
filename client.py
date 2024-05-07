@@ -4,7 +4,7 @@ import struct
 
 def send_video():
     HOST = '127.0.0.1'  # Replace with your server's IP address
-    PORT = 9999
+    PORT = 5000
 
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
