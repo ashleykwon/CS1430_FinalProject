@@ -28,7 +28,7 @@ def clientthread(conn):
     data = data[payload_size:]
 
     # For debugging purposes only! 
-    capDebugging = cv2.VideoCapture(0)
+    # capDebugging = cv2.VideoCapture(0)
 
     # # get frame size
     # ret, frame = capDebugging.read()
@@ -43,8 +43,8 @@ def clientthread(conn):
             frame_data = data[:msg_size]
             data = data[msg_size:]
 
-            frame = np.frombuffer(frame_data, dtype=np.uint8)
-            frame = frame.reshape(w, h, c)
+            # frame = np.frombuffer(frame_data, dtype=np.uint8)
+            # frame = frame.reshape(w, h, c)
 
             # Process frame here
             # processedFrame = np.zeros((10, 10)) # REPLACE THIS TO A REAL FRAME
@@ -54,8 +54,8 @@ def clientthread(conn):
             # processedFrame.open(stream)
             
             # cv2.imshow('Received', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
     finally:
         conn.close()
 
@@ -76,7 +76,7 @@ def main():
         while True:
             for j in range(len(list_sock)):
                 conn, addr = list_sock[j].accept()
-                print('[*] Connected with ' + addr[0] + ':' + str(addr[1]))
+                print('[*] Connected with ' + addr[0] + ':' + str(addr[1])) # 
                 start_new_thread(clientthread ,(conn,))
         s.close()
     except KeyboardInterrupt as msg:

@@ -9,7 +9,10 @@ def send_video():
 
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((HOST, PORT))
+    try:
+        client_socket.connect((HOST, PORT))
+    except socket.error as e:
+        print(f"Error connecting to {HOST}:{PORT}: {e}")
 
     # Start video capture using the two webcams
     cap0 = cv2.VideoCapture(0)
@@ -30,7 +33,6 @@ def send_video():
     # send video
     try:
         while True:
-           
             ret, frame = cap0.read()
             ret1, frame1 = cap1.read()
             if not ret:
@@ -38,7 +40,7 @@ def send_video():
             joined_frame = np.concatenate((frame, frame1))
             joined_frame_data = joined_frame.flatten().tobytes()
             client_socket.sendall(joined_frame_data)
-
+            # print("connected to host")
     finally:
         cap0.release()
         cap1.release()

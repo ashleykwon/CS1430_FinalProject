@@ -25,7 +25,8 @@ def send_and_receive_video():
     size = len(data)
 
     client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size))
-   
+    
+    ## ALWAYS RUN CLIENT 1 AT PORT 5000 BEFORE RUNNING CLIENT 2 AT PORT 5001
     try:
         # Open the URL to receive video from
         # stream = urllib.reques.urlopen(SERVER_URL)
