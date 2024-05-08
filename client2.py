@@ -11,7 +11,7 @@ def send_video():
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((HOST, PORT))
 
-    # Start video capture
+    # Start video capture using the two webcams
     cap0 = cv2.VideoCapture(0)
     cap1 = cv2.VideoCapture(1)
 
@@ -24,11 +24,13 @@ def send_video():
     data2 = frame1.flatten().tobytes() # frame from camera 2
     size = len(data)+len(data2)
 
+    # Send the videos captured from two webcams to the server
     client_socket.sendall(struct.pack("Q", w+w1) + struct.pack("Q", h+h1) + struct.pack("Q", c+c1) + struct.pack("Q", size))
 
     # send video
     try:
         while True:
+           
             ret, frame = cap0.read()
             ret1, frame1 = cap1.read()
             if not ret:
@@ -36,6 +38,7 @@ def send_video():
             joined_frame = np.concatenate((frame, frame1))
             joined_frame_data = joined_frame.flatten().tobytes()
             client_socket.sendall(joined_frame_data)
+
     finally:
         cap0.release()
         cap1.release()
