@@ -24,9 +24,10 @@ def send_and_receive_video():
     size = len(data)
     clientID = 1
 
+    # Send frame metadata (width, height, channel, size, client ID) to the server ONCE
     client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID))
     
-    ## ALWAYS RUN CLIENT 1 BEFORE RUNNING CLIENT 2 
+    ## Capture video from one camera and send frames to the server
     try:
         while True:
             # Send video
@@ -39,8 +40,8 @@ def send_and_receive_video():
             # Receive video from the server through socket
             received_data = client_socket.recv(BUF_SIZE)
             if received_data:
+                # TODO: read received_data in the same format sent by multiClientServer and display it as a video
                 print(received_data)
-                # Display the received frame
      
     finally:
         cap.release()

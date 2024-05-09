@@ -45,10 +45,20 @@ def clientthread(client_socket, client_id, clients):
                 dataFor2Dto3D = data[:msg_size] 
             data = data[msg_size:]
                 
-            # Do the face detection on dataForFD
-            # Do the 2D to 3D reconstruction on dataFor2Dto3D
-            # Do the 3D to 2D mapping and save the result in dataFor3Dto2D
-            dataFor3Dto2D = b'HI'
+            # TODO 1: Do the face detection on faceDetectionInput
+            #faceDetectionInput = np.frombuffer(dataForFD, dtype=np.uint8)
+            #faceDetectionInput = faceDetectionInput.reshape(w, h, c) #this changes dataForFD into a numpy array with size (w, h, c)
+
+            # TODO 2: Do the 2D to 3D reconstruction on dataFor2Dto3D
+
+            # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
+            dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
+
+            # FOR DEBUGGING PURPOSES ONLY: Check if dataForFD is a frame from the video captured by client 1
+            # frame = np.frombuffer(dataForFD, dtype=np.uint8)
+            # print(frame.shape)
+            # frame = frame.reshape(w, h, c)
+            # cv2.imwrite('Received.png', frame) 
 
             # Send the 3D to 2D mapping result back to client 1
             if received_clientID == 1: # from client 1

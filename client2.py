@@ -42,8 +42,7 @@ def send_video():
             # joined_frame = np.concatenate((frame, frame1))
             # joined_frame_data = joined_frame.flatten().tobytes()
             # client_socket.sendall(joined_frame_data)
-            client_socket.sendall(frame)
-            # print("connected to host")
+            client_socket.sendall(frame) # for debugging purposes only. Use the line above instead 
     finally:
         cap0.release()
         # cap1.release()
