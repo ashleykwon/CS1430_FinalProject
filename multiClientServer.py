@@ -5,14 +5,18 @@ import struct
 import cv2
 import numpy as np
 import urllib.request
+import threading
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
 BUF_SIZE = 1280 * 720 * 2
-URL = "http://0.0.0.0:5000" # Change this to the IP address of the computer this program is running
 
-def clientthread(conn):
-    data = conn.recv(BUF_SIZE)
+def clientthread(client_socket, client_id, clients):
+    global dataForFD # video frame from 1 camera from client 1 for face detection 
+    global dataFor2Dto3D # video frames from 2 cameras from client 2 for 3D reconstruction
+    global dataFor3Dto2D # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
+
+    data = client_socket.recv(BUF_SIZE)
     payload_size = struct.calcsize("Q")
 
     w = struct.unpack("Q", data[:payload_size])[0]
@@ -27,60 +31,72 @@ def clientthread(conn):
     msg_size = struct.unpack("Q", data[:payload_size])[0]
     data = data[payload_size:]
 
-    # For debugging purposes only! 
-    # capDebugging = cv2.VideoCapture(0)
-
-    # # get frame size
-    # ret, frame = capDebugging.read()
-    # w, h, c = frame.shape
-    # data = frame.flatten().tobytes()
-    # size = len(data)
+    received_clientID = struct.unpack("Q", data[:payload_size])[0]
+    data = data[payload_size:]
 
     try:
         while True:
+            # Receive data from client sockets
             while len(data) < msg_size:
-                data += conn.recv(BUF_SIZE)
-            frame_data = data[:msg_size]
+                data += client_socket.recv(BUF_SIZE)
+            if received_clientID == 1: # data for face detection received from client 1
+                dataForFD = data[:msg_size]
+            elif received_clientID == 2: # data for 2D to 3D reconstruction received from client 2
+                dataFor2Dto3D = data[:msg_size] 
             data = data[msg_size:]
+                
+            # Do the face detection on dataForFD
+            # Do the 2D to 3D reconstruction on dataFor2Dto3D
+            # Do the 3D to 2D mapping and save the result in dataFor3Dto2D
+            dataFor3Dto2D = b'HI'
 
-            # frame = np.frombuffer(frame_data, dtype=np.uint8)
-            # frame = frame.reshape(w, h, c)
-
-            # Process frame here
-            # processedFrame = np.zeros((10, 10)) # REPLACE THIS TO A REAL FRAME
-            
-            # Send frame back to client by posting it to a url 
-            # stream = urllib.request.urlopen(URL)
-            # processedFrame.open(stream)
-            
-            # cv2.imshow('Received', frame)
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
+            # Send the 3D to 2D mapping result back to client 1
+            if received_clientID == 1: # from client 1
+                client_socket.sendall(dataFor3Dto2D)
+          
     finally:
-        conn.close()
+        client_socket.close()
+
+   
+
+
 
 def main():
-    try:
-        host = '127.0.0.1'
-        port = 5000
-        tot_socket = 2
-        list_sock = []
-        for i in range(tot_socket):
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-            s.bind((host, port+i))
-            s.listen(10)
-            list_sock.append(s)
-            print("[*] Server listening on %s %d" %(host, (port+i)))
+    HOST = '127.0.0.1'
+    PORT = 5000
+    # Create a server socket and bind it to the address/port
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((HOST, PORT))
+    
+    # Listen for incoming connections 
+    server_socket.listen(2)
 
+    # Dictionary to store connected clients
+    clients = {}
+
+    # Counter for client IDs
+    client_id_counter = 1
+
+    try:
         while True:
-            for j in range(len(list_sock)):
-                conn, addr = list_sock[j].accept()
-                print('[*] Connected with ' + addr[0] + ':' + str(addr[1])) # 
-                start_new_thread(clientthread ,(conn,))
-        s.close()
-    except KeyboardInterrupt as msg:
-        sys.exit(0)
+            # Accept a connection
+            client_socket, client_address = server_socket.accept()
+            print(f"Connection from {client_address}")
+
+            # Assign a unique ID to the client
+            client_id = client_id_counter
+            client_id_counter += 1
+
+            # Add the client to the dictionary
+            clients[client_id] = client_socket
+
+            # Create a thread to handle the client
+            client_thread = threading.Thread(target=clientthread, args=(client_socket, client_id, clients))
+            client_thread.start()
+
+    except KeyboardInterrupt:
+        print("Server shutting down.")
+        
 
 
 if __name__ == "__main__":
