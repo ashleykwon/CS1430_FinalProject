@@ -37,7 +37,7 @@ def send_video():
     try:
         while True:
             ret, frame = cap0.read()
-            # ret1, frame1 = cap1.read()
+            ret1, frame1 = cap1.read() # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
             if not ret:
                 break
             joined_frame = np.concatenate((frame, frame1)) # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
