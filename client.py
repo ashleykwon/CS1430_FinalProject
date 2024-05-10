@@ -64,10 +64,9 @@ def send_and_receive_video():
             if not ret:
                 break
             
-
+            ##### COMMENT THE PART BELOW BACK IN WHEN RECONSTRUCTIONS ARE IMPLEMENTED### 
             # Receive video from the server through socket
             # while len(received_data) < frameSize:
-            #     print("Stuck!")
             #     received_data += client_socket.recv(BUF_SIZE)
             # rec_image_bytes = received_data[:frameSize]
             # received_data = received_data[frameSize:]
@@ -79,8 +78,7 @@ def send_and_receive_video():
             #     cv2.imshow('Received', rec_image)
             #     if cv2.waitKey(1) & 0xFF == ord('q'):
             #         break
-                
-                # print(received_data)
+             ##### COMMENT THE PART ABOVE BACK IN WHEN RECONSTRUCTIONS ARE IMPLEMENTED### 
      
     finally:
         cap.release()
