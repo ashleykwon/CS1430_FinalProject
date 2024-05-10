@@ -3,6 +3,7 @@ import socket
 import struct
 import urllib.request
 import numpy as np
+from face_detection.face_detector import FaceDetector
 
 BUF_SIZE = 1280 * 720 * 6
 HOST = '10.39.56.2'
@@ -17,6 +18,25 @@ def detect_face(image):
     faces = face_detector.detectMultiScale(image_gray, 1.3, 5)
     for (x, y, w, h) in faces:
         cv2.rectangle(output_image, (x, y), (x+w, y+h), (255, 0, 0), 2)
+    if len(faces) != 0:
+        return faces
+    else:
+        return []
+
+
+face_detector = FaceDetector('detector_model.pb')
+def detect_face(image):
+    output_image = image.copy()
+
+    input_array = np.asarray(image)[:, :, ::-1] # RGB
+    faces, scores = face_detector(input_array, score_threshold=0.9)
+
+    for (t, l, b, r) in faces:
+        t, l, b, r = int(t), int(l), int(b), int(r)
+        cv2.rectangle(output_image, (l, t), (r, b), (255,255,0), 2)
+
+    print(faces)
+
     if len(faces) != 0:
         return faces
     else:
