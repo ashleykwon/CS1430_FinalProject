@@ -36,7 +36,7 @@ def clientthread(client_socket, client_id, clients):
     received_clientID = struct.unpack("Q", data[:payload_size])[0]
     data = data[payload_size:]
 
-    face_detector = cv2.CascadeClassifier('Haarcascade_frontalface_default.xml') 
+    # face_detector = cv2.CascadeClassifier('Haarcascade_frontalface_default.xml') 
 
     try:
         while True:
