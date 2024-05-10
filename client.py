@@ -20,8 +20,8 @@ def detect_face(image):
         return None
     else:
         t, l, b, r = faces[np.argmax(scores)]
-        t, l, b, r = int(t), int(l), int(b), int(r)
-        return (t, l, b, r)
+        c_x, c_y = (l + r) // 2, (t + b) // 2
+        return (c_x, c_y)
 
 
 def send_and_receive_video():
