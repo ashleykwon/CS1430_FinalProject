@@ -3,6 +3,7 @@ import socket
 import struct
 import urllib.request
 import numpy as np
+import pickle
 from face_detection.face_detector import FaceDetector
 
 BUF_SIZE = 1280 * 720 * 6
@@ -12,19 +13,15 @@ PORT = 5000
 
 face_detector = FaceDetector('face_detection/detector_model.pb')
 def detect_face(image):
-    output_image = image.copy()
-
     input_array = np.asarray(image)[:, :, ::-1] # RGB
     faces, scores = face_detector(input_array, score_threshold=0.9)
 
-    for (t, l, b, r) in faces:
-        t, l, b, r = int(t), int(l), int(b), int(r)
-        cv2.rectangle(output_image, (l, t), (r, b), (255,255,0), 2)
-
-    if len(faces) != 0:
-        return faces
+    if len(faces) == 0:
+        return None
     else:
-        return []
+        t, l, b, r = faces[np.argmax(scores)]
+        t, l, b, r = int(t), int(l), int(b), int(r)
+        return (t, l, b, r)
 
 
 def send_and_receive_video():
@@ -53,13 +50,13 @@ def send_and_receive_video():
         while True:
             # Send video
             ret, frame = cap.read()
-            faceCoordinate = detect_face(frame)
+            faceCoordinates = detect_face(frame)
             if not ret:
                 break
-            if len(faceCoordinate) != 0:
+            if faceCoordinates is not None:
                 print("face detected")
-            # data = frame.flatten().tobytes()
-                client_socket.sendall(faceCoordinate[0])
+                face_bytes = pickle.dumps(faceCoordinates)
+                client_socket.sendall(face_bytes)
 
             # Receive video from the server through socket
             while len(received_data) < size:

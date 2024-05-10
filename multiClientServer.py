@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import urllib.request
 import threading
+import pickle
 
 
 # face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml') 
@@ -58,7 +59,7 @@ def clientthread(client_socket, client_id, clients):
                 dataFor2Dto3D = data[:msg_size] 
             data = data[msg_size:]
 
-            print(dataForFD)
+            print(pickle.loads(dataForFD))
             
             # frame = np.frombuffer(dataForFD, dtype=np.uint8)
             # frame = frame.reshape(w, h, c)
