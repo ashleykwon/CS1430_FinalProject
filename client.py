@@ -37,10 +37,15 @@ def send_and_receive_video():
             client_socket.sendall(data)
 
             # Receive video from the server through socket
-            received_data = client_socket.recv(BUF_SIZE)
-            if received_data:
-                # TODO: read received_data in the same format sent by multiClientServer and display it as a video
-                print(received_data)
+            while len(data) < size:
+                received_data += client_socket.recv(BUF_SIZE)
+            rec_image_bytes = received_data[:size]
+            received_data = received_data[size:]
+
+            rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8).reshape(w, h, c)
+            cv2.imshow('Received', rec_image)
+            # TODO: read received_data in the same format sent by multiClientServer and display it as a video
+            # print(received_data)
      
     finally:
         cap.release()
