@@ -4,9 +4,11 @@ import struct
 import urllib.request
 import numpy as np
 
-BUF_SIZE = 1280 * 720 * 2
+BUF_SIZE = 1280 * 720 * 6
 HOST = '10.39.56.2'
 PORT = 5000
+
+face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 def send_and_receive_video():
     # Connect to server
@@ -39,15 +41,21 @@ def send_and_receive_video():
             client_socket.sendall(data)
 
             # Receive video from the server through socket
-            while len(data) < size:
+            while len(received_data) < size:
                 received_data += client_socket.recv(BUF_SIZE)
+
             rec_image_bytes = received_data[:size]
             received_data = received_data[size:]
-
-            rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8).reshape(w, h, c)
-            cv2.imshow('Received', rec_image)
-            # TODO: read received_data in the same format sent by multiClientServer and display it as a video
-            # print(received_data)
+            
+            # Read received_data in the same format sent by multiClientServer and display it as a video
+            if rec_image_bytes:
+                rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8)
+                rec_image = rec_image.reshape(w, h, c)
+                cv2.imshow('Received', rec_image)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                
+                # print(received_data)
      
     finally:
         cap.release()
