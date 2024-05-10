@@ -21,8 +21,6 @@ def detect_face(image):
         t, l, b, r = int(t), int(l), int(b), int(r)
         cv2.rectangle(output_image, (l, t), (r, b), (255,255,0), 2)
 
-    print(faces)
-
     if len(faces) != 0:
         return faces
     else:
