@@ -26,6 +26,8 @@ def send_and_receive_video():
     # Send frame metadata (width, height, channel, size, client ID) to the server ONCE
     client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID))
     
+    received_data = b''
+
     ## Capture video from one camera and send frames to the server
     try:
         while True:
