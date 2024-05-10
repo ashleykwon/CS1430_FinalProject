@@ -9,22 +9,8 @@ BUF_SIZE = 1280 * 720 * 6
 HOST = '10.39.56.2'
 PORT = 5000
 
-face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml') 
-print("face detector downloaded")
 
-def detect_face(image):
-    output_image = image.copy()
-    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    faces = face_detector.detectMultiScale(image_gray, 1.3, 5)
-    for (x, y, w, h) in faces:
-        cv2.rectangle(output_image, (x, y), (x+w, y+h), (255, 0, 0), 2)
-    if len(faces) != 0:
-        return faces
-    else:
-        return []
-
-
-face_detector = FaceDetector('detector_model.pb')
+face_detector = FaceDetector('face_detection/detector_model.pb')
 def detect_face(image):
     output_image = image.copy()
 
