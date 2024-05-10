@@ -10,6 +10,8 @@ import threading
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
 BUF_SIZE = 1280 * 720 * 2
+HOST = '10.39.56.2'
+PORT = 5000
 
 def clientthread(client_socket, client_id, clients):
     global dataForFD # video frame from 1 camera from client 1 for face detection 
@@ -33,6 +35,8 @@ def clientthread(client_socket, client_id, clients):
 
     received_clientID = struct.unpack("Q", data[:payload_size])[0]
     data = data[payload_size:]
+
+    face_detector = cv2.CascadeClassifier('Haarcascade_frontalface_default.xml') 
 
     try:
         while True:
@@ -72,8 +76,6 @@ def clientthread(client_socket, client_id, clients):
 
 
 def main():
-    HOST = '127.0.0.1'
-    PORT = 5000
     # Create a server socket and bind it to the address/port
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((HOST, PORT))

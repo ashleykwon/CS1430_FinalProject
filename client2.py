@@ -3,10 +3,10 @@ import socket
 import struct
 import numpy as np
 
-def send_video():
-    HOST = '127.0.0.1'  # Replace with your server's IP address
-    PORT = 5000
+HOST = '10.39.56.2'
+PORT = 5000
 
+def send_video():
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:

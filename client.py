@@ -5,11 +5,10 @@ import urllib.request
 import numpy as np
 
 BUF_SIZE = 1280 * 720 * 2
+HOST = '10.39.56.2'
+PORT = 5000
 
 def send_and_receive_video():
-    HOST = '127.0.0.1'  # Replace with your server's IP address
-    PORT = 5000
-
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((HOST, PORT))
