@@ -8,15 +8,15 @@ import urllib.request
 import threading
 
 
-face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml') 
+# face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml') 
 
-def detect_face(image):
-    output_image = image.copy()
-    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    faces = face_detector.detectMultiScale(image_gray, 1.3, 5)
-    for (x, y, w, h) in faces:
-        cv2.rectangle(output_image, (x, y), (x+w, y+h), (255, 0, 0), 2)
-    return output_image
+# def detect_face(image):
+#     output_image = image.copy()
+#     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#     faces = face_detector.detectMultiScale(image_gray, 1.3, 5)
+#     for (x, y, w, h) in faces:
+#         cv2.rectangle(output_image, (x, y), (x+w, y+h), (255, 0, 0), 2)
+#     return output_image
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
@@ -57,12 +57,22 @@ def clientthread(client_socket, client_id, clients):
             elif received_clientID == 2: # data for 2D to 3D reconstruction received from client 2
                 dataFor2Dto3D = data[:msg_size] 
             data = data[msg_size:]
+
+            print(dataForFD)
             
+            # frame = np.frombuffer(dataForFD, dtype=np.uint8)
+            # frame = frame.reshape(w, h, c)
+            # cv2.imshow('Received', frame)
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
             
             # TODO 1: Do the face detection on faceDetectionInput
-            faceDetectionInput = np.frombuffer(dataForFD, dtype=np.uint8)
-            faceDetectionInput = faceDetectionInput.reshape(w, h, c) #this changes dataForFD into a numpy array with size (w, h, c)
-            dataFor3Dto2D = detect_face(faceDetectionInput)
+
+            # faceDetectionInput = np.frombuffer(dataForFD, dtype=np.uint8)
+            # faceDetectionInput = faceDetectionInput.reshape(w, h, c) #this changes dataForFD into a numpy array with size (w, h, c)
+            # dataFor3Dto2D = detect_face(faceDetectionInput)
+            
+            # dataFor3Dto2D = faceDetectionInput
 
             # TODO 2: Do the 2D to 3D reconstruction on dataFor2Dto3D
 
@@ -77,7 +87,8 @@ def clientthread(client_socket, client_id, clients):
 
             # Send the 3D to 2D mapping result back to client 1
             if received_clientID == 1: # from client 1
-                dataFor3Dto2D = dataFor3Dto2D.flatten().tobytes()
+                # dataFor3Dto2D = dataFor3Dto2D.flatten().tobytes()
+                dataFor3Dto2D = dataForFD
                 client_socket.sendall(dataFor3Dto2D)
           
     finally:
@@ -102,21 +113,21 @@ def main():
     client_id_counter = 1
 
     try:
-        while True:
-            # Accept a connection
-            client_socket, client_address = server_socket.accept()
-            print(f"Connection from {client_address}")
+        # while True:
+        # Accept a connection
+        client_socket, client_address = server_socket.accept()
+        print(f"Connection from {client_address}")
 
-            # Assign a unique ID to the client
-            client_id = client_id_counter
-            client_id_counter += 1
+        # Assign a unique ID to the client
+        client_id = client_id_counter
+        client_id_counter += 1
 
-            # Add the client to the dictionary
-            clients[client_id] = client_socket
+        # Add the client to the dictionary
+        clients[client_id] = client_socket
 
-            # Create a thread to handle the client
-            client_thread = threading.Thread(target=clientthread, args=(client_socket, client_id, clients))
-            client_thread.start()
+        # Create a thread to handle the client
+        client_thread = threading.Thread(target=clientthread, args=(client_socket, client_id, clients))
+        client_thread.start()
 
     except KeyboardInterrupt:
         print("Server shutting down.")
