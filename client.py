@@ -9,6 +9,7 @@ HOST = '10.39.56.2'
 PORT = 5000
 
 face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml') 
+print("face detector downloaded")
 
 def detect_face(image):
     output_image = image.copy()
@@ -16,13 +17,17 @@ def detect_face(image):
     faces = face_detector.detectMultiScale(image_gray, 1.3, 5)
     for (x, y, w, h) in faces:
         cv2.rectangle(output_image, (x, y), (x+w, y+h), (255, 0, 0), 2)
-    return faces
+    if len(faces) != 0:
+        return faces
+    else:
+        return []
 
 
 def send_and_receive_video():
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((HOST, PORT))
+    print("connected")
 
     # Start video capture
     cap = cv2.VideoCapture(0)
@@ -47,8 +52,10 @@ def send_and_receive_video():
             faceCoordinate = detect_face(frame)
             if not ret:
                 break
+            if len(faceCoordinate) != 0:
+                print("face detected")
             # data = frame.flatten().tobytes()
-            client_socket.sendall(faceCoordinate)
+                client_socket.sendall(faceCoordinate[0])
 
             # Receive video from the server through socket
             while len(received_data) < size:
