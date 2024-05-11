@@ -8,6 +8,7 @@ import urllib.request
 import threading
 import pickle
 from 3d_projections.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
+import intrinsics
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
@@ -73,11 +74,19 @@ def clientthread(client_socket, client_id, clients):
             # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
             # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
             # dataFor3Dto2D SHOULD BE A NUMPY ARRAY
-                intrinsicMatrix = np.asarray([[]]) # Should be the same across the two webcams and the client1's head (aka third camera)
-                leftCameraRt = np.zeros((3, 4))
-                translation = np.multiply(leftCameraRt[:,3], np.asarray([faceCoordinate[0], faceCoordinate[1], 0]))
+                
+                leftCameraRotation = np.asarray([
+                    [0.9117811489826978, 0.07599962415662805,0.4035829449912901],
+                    [-0.06867995442145704,0.9971058203375325,-0.03260440015830532],
+                    [-0.40489282559766104,0.002010019170952072, 0.9143619412478159]])
+                leftCameraTranslation = np.asarray([[-19.269844497623666],[1.1276310094741875],[5.48936711837891]])
+                translation = np.multiply(leftCameraTranslation, np.asarray([faceCoordinate[0], faceCoordinate[1], 0]))
                 rotation = np.zeros(3, 3)
-                extrinsicMatrix = np.hstack((rotation, translation)
+
+                extrinsicMatrix = np.hstack((rotation, translation))
+                intrinsicMatrix = intrinsics.get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080) # Should be the same across the two webcams and the client1's head (aka third camera)
+
+                # Use the extrinsic and the intrinsic matrices to get uv coordinates
 
             # FOR DEBUGGING PURPOSES ONLY: Check if dataForFD is a frame from the video captured by client 1
             # frame = np.frombuffer(dataForFD, dtype=np.uint8)
