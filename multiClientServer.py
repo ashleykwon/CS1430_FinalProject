@@ -10,6 +10,7 @@ import pickle
 from ThreeD_projections.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
 import intrinsics
 import torch
+from PIL import Image
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
@@ -19,9 +20,11 @@ PORT = 5000
 
 zoe_projector = ZoeProjection(device='cuda' if torch.cuda.is_available() else 'cpu')
 
+# dataFor2Dto3D = b''
+
 def clientthread(client_socket, client_id, clients):
     global faceCoordinate # video frame from 1 camera from client 1 for face detection
-    global dataFor2Dto3D # video frames from 2 cameras from client 2 for 3D reconstruction
+    global dataFor2Dto3D  # video frames from 2 cameras from client 2 for 3D reconstruction
     global dataFor3Dto2D # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
 
     data = client_socket.recv(BUF_SIZE)
@@ -53,7 +56,7 @@ def clientthread(client_socket, client_id, clients):
             elif received_clientID == 2: # data for 2D to 3D reconstruction received from client 2
                 dataFor2Dto3D = data[:msg_size]
             data = data[msg_size:]
-
+            # print(dataFor2Dto3D)
             # Print the user's face position (2D coordinate) for debugging purposes
             # print(pickle.loads(faceCoordinate))
 
@@ -70,8 +73,11 @@ def clientthread(client_socket, client_id, clients):
                 joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8)
                 joined_frames = joined_frames.reshape(w, h, c) #this changes dataForFD into a numpy array with size (w, h, c)
                 singleFrameWidth = int(w//2) # Assumes frames from the two video cameras are joined side by side
-                leftCameraFrame = joined_frames[:singleFrameWidth, :, :]
-                rightCameraFrame = joined_frames[singleFrameWidth:, :, :]
+                leftCameraFrame =  cv2.cvtColor(joined_frames[:singleFrameWidth, :, :], cv2.COLOR_BGR2RGB)
+                rightCameraFrame = cv2.cvtColor(joined_frames[singleFrameWidth:, :, :], cv2.COLOR_BGR2RGB)
+               
+                # print(leftCameraFrame.shape)
+                # print(rightCameraFrame.shape)
                 dataFor3Dto2D = rightCameraFrame
 
                 intrinsicMatrix = intrinsics.get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080)  # Should be the same across the two webcams and the client1's head (aka third camera)
@@ -79,13 +85,13 @@ def clientthread(client_socket, client_id, clients):
                     [0.9117811489826978, 0.07599962415662805,0.4035829449912901],
                     [-0.06867995442145704,0.9971058203375325,-0.03260440015830532],
                     [-0.40489282559766104,0.002010019170952072, 0.9143619412478159]])
-                leftCameraTranslation = np.asarray([[-19.269844497623666],[1.1276310094741875],[5.48936711837891]])
+                leftCameraTranslation = np.asarray([-19.269844497623666,1.1276310094741875, 5.48936711837891])
 
-                leftCameraTo3D = zoe_projector.to_3d_points(leftCameraFrame, intrinsicMatrix, leftCameraRotation, leftCameraTranslation)
-                rightCameraTo3D = zoe_projector.to_3d_points(rightCameraFrame, intrinsicMatrix, np.identity(3), np.zeros(3))
-                print(leftCameraTo3D.shape)
-                print(rightCameraTo3D.shape)
-           
+                leftCameraTo3D = zoe_projector.to_3d_points(Image.fromarray(leftCameraFrame), intrinsicMatrix, leftCameraRotation, leftCameraTranslation)
+                rightCameraTo3D = zoe_projector.to_3d_points(Image.fromarray(rightCameraFrame), intrinsicMatrix, np.eye(3), np.zeros(3))
+                # print(leftCameraTo3D.shape)
+                # print(rightCameraTo3D.shape)
+            
            
             # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
             # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
@@ -98,6 +104,8 @@ def clientthread(client_socket, client_id, clients):
                 # extrinsicMatrix = np.hstack((rotation, translation))
 
                 # Use the extrinsic and the intrinsic matrices to get uv coordinates
+                dataFor3Dto2D = rightCameraFrame # change this to an actual output
+                
 
             # FOR DEBUGGING PURPOSES ONLY: Check if dataForFD is a frame from the video captured by client 1
             # frame = np.frombuffer(dataForFD, dtype=np.uint8)
@@ -110,6 +118,7 @@ def clientthread(client_socket, client_id, clients):
                 if received_clientID == 1: # from client 1
                     dataFor3Dto2D = dataFor3Dto2D.flatten().tobytes()
                     client_socket.sendall(dataFor3Dto2D)
+    
 
     finally:
         client_socket.close()
@@ -121,7 +130,7 @@ def main():
     server_socket.bind((HOST, PORT))
 
     # Listen for incoming connections
-    server_socket.listen(2)
+    server_socket.listen(10)
 
     # Dictionary to store connected clients
     clients = {}
@@ -130,21 +139,21 @@ def main():
     client_id_counter = 1
 
     try:
-        # while True:
-        # Accept a connection
-        client_socket, client_address = server_socket.accept()
-        print(f"Connection from {client_address}")
+        while True:
+            # Accept a connection
+            client_socket, client_address = server_socket.accept()
+            print(f"Connection from {client_address}")
 
-        # Assign a unique ID to the client
-        client_id = client_id_counter
-        client_id_counter += 1
+            # Assign a unique ID to the client
+            client_id = client_id_counter
+            client_id_counter += 1
 
-        # Add the client to the dictionary
-        clients[client_id] = client_socket
+            # Add the client to the dictionary
+            clients[client_id] = client_socket
 
-        # Create a thread to handle the client
-        client_thread = threading.Thread(target=clientthread, args=(client_socket, client_id, clients))
-        client_thread.start()
+            # Create a thread to handle the client
+            client_thread = threading.Thread(target=clientthread, args=(client_socket, client_id, clients))
+            client_thread.start()
 
     except KeyboardInterrupt:
         print("Server shutting down.")
