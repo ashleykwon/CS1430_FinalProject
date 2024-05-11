@@ -6,7 +6,7 @@ import numpy as np
 HOST = "10.39.56.2"
 PORT = 5000
 
-
+# TODO: add the part for sending K, R, and t from both cameras
 def send_video():
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

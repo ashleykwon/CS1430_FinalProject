@@ -11,18 +11,17 @@ import torch
 from PIL import Image
 import pickle
 
-# Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
-
+# Referenced from:
+#   https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
+#   https://realpython.com/intro-to-python-threading/
+ 
 BUF_SIZE = 1280 * 720 * 2
 HOST = "10.39.56.2"
 PORT = 5000
 
 zoe_depth = ZoeDepth(device=("cuda" if torch.cuda.is_available() else "cpu"))
 
-# dataFor2Dto3D = b''
-
-
-def clientthread(client_socket, client_id, clients):
+def client_thread_function(client_socket):
     global faceCoordinate  # video frame from 1 camera from client 1 for face detection
     global dataFor2Dto3D  # video frames from 2 cameras from client 2 for 3D reconstruction
     global dataFor3Dto2D  # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
@@ -112,7 +111,7 @@ def clientthread(client_socket, client_id, clients):
                 new_y = faceCoordinate[1]
 
                 reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l, K_r, R_r, t_r, new_x, new_y)
-                reprojected_image = cv2.cvtColor(reprojected_image, cv2.COLOR_RGB2BGR)
+                # reprojected_image = cv2.cvtColor(reprojected_image, cv2.COLOR_RGB2BGR)
 
                 # TODO: send reprojected image back
 
@@ -131,7 +130,7 @@ def main():
     server_socket.bind((HOST, PORT))
 
     # Listen for incoming connections
-    server_socket.listen(10)
+    server_socket.listen(5)
 
     # Dictionary to store connected clients
     clients = {}
@@ -143,7 +142,7 @@ def main():
         while True:
             # Accept a connection
             client_socket, client_address = server_socket.accept()
-            print(f"Connection from {client_address}")
+            print(f"Got connection from {client_address}")
 
             # Assign a unique ID to the client
             client_id = client_id_counter
@@ -154,7 +153,7 @@ def main():
 
             # Create a thread to handle the client
             client_thread = threading.Thread(
-                target=clientthread, args=(client_socket, client_id, clients)
+                target=client_thread_function, args=(client_socket,)
             )
             client_thread.start()
 
