@@ -46,6 +46,7 @@ def send_and_receive_video():
     faceCoordinates = detect_face(frame)
     face_bytes = pickle.dumps(faceCoordinates)
     size = len(face_bytes)
+    print('size: ' + str(size))
     clientID = 1
 
     # Send frame metadata (width, height, channel, size, client ID) to the server ONCE
