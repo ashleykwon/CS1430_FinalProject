@@ -32,6 +32,7 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l,
 
     # Use the extrinsic and the intrinsic matrices to get uv coordinates
     dataFor3Dto2D = rightCameraFrame  # change this to an actual output
+    return dataFor3Dto2D
 
     # FOR DEBUGGING PURPOSES ONLY: Check if dataForFD is a frame from the video captured by client 1
     # frame = np.frombuffer(dataForFD, dtype=np.uint8)
