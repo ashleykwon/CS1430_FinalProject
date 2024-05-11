@@ -1,31 +1,27 @@
 import glob
+import io
+import json
 import os
 import time
 import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
+import torch
+from tqdm import tqdm
+import plotly.graph_objs as go
 
-# # Depth Map from Stereo Images 
-# # https://docs.opencv.org/4.x/dd/d53/tutorial_py_depthmap.html
-# cap0 = cv.VideoCapture(0)
-# cap1 = cv.VideoCapture(1)
+# from zoedepth.models.builder import build_model
+# from zoedepth.utils.config import get_config
 
-# ret, frame = cap0.read()
-# ret1, frame1 = cap1.read()
-# w, h, c = frame.shape
-# w1, h1, c1 = frame1.shape
-# frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-# frame1_gray = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)
- 
-# stereo = cv.StereoBM.create(numDisparities=16, blockSize=5)
-# disparity = stereo.compute(frame_gray,frame1_gray)
-# plt.imshow(disparity,'gray')
-# plt.show()
 
+# import ssl
+# ssl._create_default_https_context = ssl._create_unverified_context
+# https://gist.github.com/hprobotic/0dc912f69483c3bdf578d4315249820a
+
+
+# Should have Cam 1 as VideoCapture(0), as Left Frame, connected to Left USB
+# Should have Cam 2 as VideoCapture(1), as Right Frame, connected to Right USB
 cams = {"1": 0, "2": 1}
-
-# termination criteria
-criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 
 # 1 Find camera calibration matrices (instrinsic, extrinsic) one time thing
@@ -33,18 +29,28 @@ criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # https://www.geeksforgeeks.org/camera-calibration-with-python-opencv/
 # https://nikatsanka.github.io/camera-calibration-using-opencv-and-python.html
 
-def take_calibration_images(cam_name):
-    if not os.path.exists(cam_name):
-        os.makedirs(cam_name)
-    cap = cv.VideoCapture(cams[cam_name])
-    for i in range(10):
-        ret, frame = cap.read()
-        cv.imwrite(cam_name + '/' + str(i) + '.jpg', frame)
-        time.sleep(1)
+def take_calibration_images():
+    for name in cams:
+        if not os.path.exists(name):
+            os.makedirs(name)
+    cap1 = cv.VideoCapture(0)
+    cap2 = cv.VideoCapture(1)
+    for i in tqdm(range(10)):
+        time.sleep(2)
+        _, frame1 = cap1.read()
+        _, frame2 = cap2.read()
+        cv.imwrite('1/' + str(i) + '.jpg', frame1)
+        cv.imwrite('2/' + str(i) + '.jpg', frame2)
 
-def calibrate_camera(cam_name):
-    if not os.path.exists(cam_name + '_corners'):
-        os.makedirs(cam_name + '_corners')
+# https://github.com/IntelRealSense/librealsense/blob/master/doc/depth-from-stereo.md
+# https://learnopencv.com/making-a-low-cost-stereo-camera-using-opencv/
+def calibrate_cameras():
+    for name in cams:
+        if not os.path.exists(name + '_corners'):
+            os.makedirs(name + '_corners')
+
+    # termination criteria
+    criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
     objp = np.zeros((7*10,3), np.float32)
@@ -52,47 +58,141 @@ def calibrate_camera(cam_name):
     
     # Arrays to store object points and image points from all the images.
     objpoints = [] # 3d point in real world space
-    imgpoints = [] # 2d points in image plane.
+    imgpointsL = [] # 2d points in left image plane.
+    imgpointsR = [] # 2d points in right image plane.
     
-    images = glob.glob(str(cam_name) + '/*.jpg')
-    
-    for fname in images:
-        img = cv.imread(fname)
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        
-        # Find the chess board corners
-        ret, corners = cv.findChessboardCorners(gray, (7,10), None)
-        
-        # If found, add object points, image points (after refining them)
-        if ret == True:
-            objpoints.append(objp)
-            
-            corners2 = cv.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
-            imgpoints.append(corners2)
-            
-            # Draw and display the corners
-            cv.drawChessboardCorners(img, (7,10), corners2, ret)
-        cv.imshow('img', img)
-        cv.imwrite(cam_name + '_corners/' + fname, img)
-        cv.waitKey(500)
+    for i in tqdm(range(10)):
+        imgL = cv.imread("1/%d.jpg"%i)
+        imgR = cv.imread("2/%d.jpg"%i)
+        imgL_gray = cv.imread("1/%d.jpg"%i,0)
+        imgR_gray = cv.imread("2/%d.jpg"%i,0)
 
-    ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
-    print(ret)
-    print("Camera matrix:") 
-    print(mtx)
-    print("\nDistortion coefficient:") 
-    print(dist)
-    print("\nRotation Vectors:") 
-    print(rvecs)
-    print("\nTranslation Vectors:") 
-    print(tvecs)
+        outputL = imgL.copy()
+        outputR = imgR.copy()
+        
+        retR, cornersR =  cv.findChessboardCorners(outputR,(7,10),None)
+        retL, cornersL = cv.findChessboardCorners(outputL,(7,10),None)
+        
+        if retR and retL:
+            objpoints.append(objp)
+            cv.cornerSubPix(imgR_gray,cornersR,(11,11),(-1,-1),criteria)
+            cv.cornerSubPix(imgL_gray,cornersL,(11,11),(-1,-1),criteria)
+            cv.drawChessboardCorners(outputR,(7,10),cornersR,retR)
+            cv.drawChessboardCorners(outputL,(7,10),cornersL,retL)
+            cv.imwrite("1_corners/%d.jpg"%i, outputL)
+            cv.imwrite("2_corners/%d.jpg"%i, outputR)
+        
+            imgpointsL.append(cornersL)
+            imgpointsR.append(cornersR)
+        
+    # Calibrating left camera
+    retL, mtxL, distL, rvecsL, tvecsL = cv.calibrateCamera(objpoints,imgpointsL,imgL_gray.shape[::-1],None,None)
+    camLInt = np.asarray(mtxL).tolist()
+    # hL,wL= imgL_gray.shape[:2]
+    # new_mtxL, roiL= cv.getOptimalNewCameraMatrix(mtxL,distL,(wL,hL),1,(wL,hL))
+    
+    # Calibrating right camera
+    retR, mtxR, distR, rvecsR, tvecsR = cv.calibrateCamera(objpoints,imgpointsR,imgR_gray.shape[::-1],None,None)
+    camRInt = np.asarray(mtxR).tolist()
+    # hR,wR= imgR_gray.shape[:2]
+    # new_mtxR, roiR= cv2.getOptimalNewCameraMatrix(mtxR,distR,(wR,hR),1,(wR,hR))
+
+    # Write JSON file
+    with io.open('camLInt.json', 'w', encoding='utf8') as outfile:
+        str_ = json.dumps(camLInt,
+                        indent=4, sort_keys=True,
+                        separators=(',', ': '))
+        outfile.write(str_)
+
+    with io.open('camRInt.json', 'w', encoding='utf8') as outfile:
+        str_ = json.dumps(camRInt,
+                        indent=4, sort_keys=True,
+                        separators=(',', ': '))
+        outfile.write(str_)
+    
+    flags = 0
+    flags |= cv.CALIB_FIX_INTRINSIC
+    # Here we fix the intrinsic camara matrixes so that only Rot, Trns, Emat and Fmat are calculated.
+    # Hence intrinsic parameters are the same 
+    
+    criteria_stereo = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    
+    # This step is performed to transformation between the two cameras and calculate Essential and Fundamental matrix
+    retS, mtxL, distL, mtxR, distR, Rot, Trns, Emat, Fmat = cv.stereoCalibrate(objpoints,
+                                                                               imgpointsL,
+                                                                               imgpointsR,
+                                                                               mtxL,
+                                                                               distL,
+                                                                               mtxR,
+                                                                               distR,
+                                                                               imgL_gray.shape[::-1],
+                                                                               criteria_stereo,
+                                                                               flags)
+    camLExt = {'Rot': np.asarray(Rot).tolist(),
+               'Trns': np.asarray(Trns).tolist()}
+    camRExt = {'Rot': np.asarray(np.identity(3)).tolist(),
+               'Trns': np.asarray(np.zeros(3)).tolist()}
+    with io.open('camLExt.json', 'w', encoding='utf8') as outfile:
+        str_ = json.dumps(camLExt,
+                        indent=4, sort_keys=True,
+                        separators=(',', ': '))
+        outfile.write(str_)
+    with io.open('camRExt.json', 'w', encoding='utf8') as outfile:
+        str_ = json.dumps(camRExt,
+                        indent=4, sort_keys=True,
+                        separators=(',', ': '))
+        outfile.write(str_)
+    
+    rectify_scale= 1
+    rect_l, rect_r, proj_mat_l, proj_mat_r, Q, roiL, roiR= cv.stereoRectify(mtxL, 
+                                                                            distL, 
+                                                                            mtxR, 
+                                                                            distR, 
+                                                                            imgL_gray.shape[::-1], 
+                                                                            Rot, 
+                                                                            Trns, 
+                                                                            rectify_scale,
+                                                                            (0,0))
+    
+    with io.open('Q.json', 'w', encoding='utf8') as outfile:
+        str_ = json.dumps(np.asarray(Q).tolist(),
+                        indent=4, sort_keys=True,
+                        separators=(',', ': '))
+        outfile.write(str_)
+
+
+def get_calibrations():
+    # Opening JSON file
+    with open('camLInt.json', 'r') as openfile:
+        # Reading from json file
+        camLInt = json.load(openfile)
+        camLInt = np.asarray(camLInt)
+    with open('camRInt.json', 'r') as openfile:
+        # Reading from json file
+        camRInt = json.load(openfile)
+        camRInt = np.asarray(camRInt)
+    with open('camLExt.json', 'r') as openfile:
+        # Reading from json file
+        camLExt = json.load(openfile)
+        camLExt = {'Rot': np.asarray(camLExt['Rot']),
+                   'Trns': np.asarray(camLExt['Trns'])}
+    with open('camRExt.json', 'r') as openfile:
+        # Reading from json file
+        camRExt = json.load(openfile)
+        camRExt = {'Rot': np.asarray(camRExt['Rot']),
+                   'Trns': np.asarray(camRExt['Trns'])}
+    with open('Q.json', 'r') as openfile:
+        # Reading from json file
+        Q = json.load(openfile)
+        Q = np.asarray(Q)
+    return camLInt, camRInt, camLExt, camRExt, Q
 
 # 2 Find SIFT features b/w images and matches
 def take_stereo_images():
     cap1 = cv.VideoCapture(0)
     cap2 = cv.VideoCapture(1)
-    ret1, frame1 = cap1.read()
-    ret2, frame2 = cap2.read()
+    _, frame1 = cap1.read()
+    _, frame2 = cap2.read()
     cv.imwrite('stereo_1.jpg', frame1)
     cv.imwrite('stereo_2.jpg', frame2)
 
@@ -118,6 +218,7 @@ def features_and_matching():
             pts1.append(kp_1[m.queryIdx].pt)
     
     return img_1, img_2, pts1, pts2
+
 
 # 3 Fundamental mats and then find epipolar lines
 # https://docs.opencv.org/4.x/da/de9/tutorial_py_epipolar_geometry.html
@@ -149,34 +250,128 @@ def images_with_epipolars(img_1, img_2, pts_1, pts_2):
     # drawing its lines on left image
     lines1 = cv.computeCorrespondEpilines(pts_2.reshape(-1,1,2), 2,F)
     lines1 = lines1.reshape(-1,3)
-    img_5,img_6 = drawlines(img_1,img_2,lines1,pts_1,pts_2)
+    img_L, _ = drawlines(img_1,img_2,lines1,pts_1,pts_2)
     
     # Find epilines corresponding to points in left image (first image) and
     # drawing its lines on right image
     lines2 = cv.computeCorrespondEpilines(pts_1.reshape(-1,1,2), 1,F)
     lines2 = lines2.reshape(-1,3)
-    img_3,img_4 = drawlines(img_2,img_1,lines2,pts_2,pts_1)
-    
-    plt.subplot(121),plt.imshow(img_5)
-    plt.subplot(122),plt.imshow(img_3)
-    plt.show()
+    img_R, _ = drawlines(img_2,img_1,lines2,pts_2,pts_1)
 
-# 4 Rectify images based on 4
+    cv.imwrite("epipolar_1.png", img_L)
+    cv.imwrite("epipolar_2.png", img_R)
+    return F, pts_1, pts_2, img_L, img_R
 
-# 5 Dense correspondences from 4/5
+
+# 4 Rectify images based on 3
+# https://www.andreasjakl.com/understand-and-apply-stereo-rectification-for-depth-maps-part-2/
+# https://stackoverflow.com/questions/36172913/opencv-depth-map-from-uncalibrated-stereo-system
+def stereo_rectification(F, pts_1, pts_2, img_1, img_2):
+    h1, w1, _ = img_1.shape
+    h2, w2, _ = img_2.shape
+    _, H1, H2 = cv.stereoRectifyUncalibrated(
+        np.float32(pts_1), np.float32(pts_2), F, imgSize=(w1, h1)
+    )
+    img1_rectified = cv.warpPerspective(img_1, H1, (w1, h1))
+    img2_rectified = cv.warpPerspective(img_2, H2, (w2, h2))
+    cv.imwrite("rectified_1.png", img1_rectified)
+    cv.imwrite("rectified_2.png", img2_rectified)
+    return img1_rectified, img2_rectified
+
+# 5 Dense correspondences from 4
 # 6 Triangulation based on dense correspondences = depth
-# 7 Proj (2D image, dpeth) => 3D point cloud
+def disparity(img_l, img_r):
+
+    grayLeft = cv.cvtColor(img_l, cv.COLOR_BGR2GRAY)
+    grayRight = cv.cvtColor(img_r, cv.COLOR_BGR2GRAY)
+
+    stereo = cv.StereoBM.create(numDisparities=16, blockSize=5)
+    disparity = stereo.compute(grayLeft,grayRight)
+    # plt.imshow(disparity,'gray')
+    # plt.show()
+    return disparity
+
+
+# 7 Proj (2D image, depth) => 3D point cloud
 # 8 3D => 2D proj. using pseudo camera with derived extrinsics
 
+def get_intrinsics(H,W):
+    """
+    Intrinsics for a pinhole camera model.
+    Assume fov of 55 degrees and central principal point.
+    """
+    # f = 0.5 * W / np.tan(0.5 * 55 * np.pi / 180.0)
+    # cx = 0.5 * W
+    # cy = 0.5 * H
+    with open('camL.json', 'r') as openfile:
+        # Reading from json file
+        camL = json.load(openfile)
+        camL = {'mtx': np.asarray(camL['mtx']),
+                'dist': np.asarray(camL['dist']),
+                'rvecs': np.asarray(camL['rvecs']),
+                'tvecs': np.asarray(camL['tvecs'])}
+    return camL['mtx']
+    # return np.array([[f, 0, cx],
+    #                  [0, f, cy],
+    #                  [0, 0, 1]])
 
-# Also could be worth trying the transformer model for stereo
-# https://github.com/autonomousvision/unimatch
+def depth_to_points(depth, R=None, t=None):
+
+    K = get_intrinsics(depth.shape[1], depth.shape[2])
+    Kinv = np.linalg.inv(K)
+    if R is None:
+        R = np.eye(3)
+    if t is None:
+        t = np.zeros(3)
+
+    # M converts from your coordinate to PyTorch3D's coordinate system
+    M = np.eye(3)
+    M[0, 0] = -1.0
+    M[1, 1] = -1.0
+
+    height, width = depth.shape[1:3]
+
+    x = np.arange(width)
+    y = np.arange(height)
+    coord = np.stack(np.meshgrid(x, y), -1)
+    coord = np.concatenate((coord, np.ones_like(coord)[:, :, [0]]), -1)  # z=1
+    coord = coord.astype(np.float32)
+    # coord = torch.as_tensor(coord, dtype=torch.float32, device=device)
+    coord = coord[None]  # bs, h, w, 3
+
+    D = depth[:, :, :, None, None]
+    # print(D.shape, Kinv[None, None, None, ...].shape, coord[:, :, :, :, None].shape )
+    pts3D_1 = D * Kinv[None, None, None, ...] @ coord[:, :, :, :, None]
+    # pts3D_1 live in your coordinate system. Convert them to Py3D's
+    pts3D_1 = M[None, None, None, ...] @ pts3D_1
+    # from reference to targe tviewpoint
+    pts3D_2 = R[None, None, None, ...] @ pts3D_1 + t[None, None, None, :, None]
+    # pts3D_2 = pts3D_1
+    # depth_2 = pts3D_2[:, :, :, 2, :]  # b,1,h,w
+    return pts3D_2[:, :, :, :3, 0][0]
+
 
 if __name__ == '__main__':
-    # take_calibration_images("1")
-    # take_calibration_images("2")
-    # calibrate_camera("1")
-    # calibrate_camera("2")
+    take_calibration_images()
+    calibrate_cameras()
+    camLInt, camRInt, camLExt, camRExt, Q = get_calibrations()
+    print(camLInt)
+    print(camRInt)
+    print(camLExt)
+    print(camRExt)
+    print(Q)
+
     # take_stereo_images()
-    img_1, img_2, pts_1, pts_2 = features_and_matching()
-    images_with_epipolars(img_1, img_2, pts_1, pts_2)
+    # img_1, img_2, pts_1, pts_2 = features_and_matching()
+    # if len(pts_1) < 9:
+    #     print("rip")
+    # F, pts_1, pts_2, img_L, img_R = images_with_epipolars(img_1, img_2, pts_1, pts_2)
+    # img1_rect, img2_rect = stereo_rectification(F, pts_1, pts_2, img_L, img_R)
+    # disp = disparity(img1_rect, img2_rect)
+    # depth = cv.reprojectImageTo3D(disp, Q)
+
+    # torch.hub.help("intel-isl/MiDaS", "DPT_BEiT_L_384", force_reload=True)  # Triggers fresh download of MiDaS repo
+    # DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # model_zoe_n = torch.hub.load("./ZoeDepth", "ZoeD_N", source="local", pretrained=True)
+    # conf = get_config("zoedepth", "infer")
+    # model_zoe_n = build_model(conf)
