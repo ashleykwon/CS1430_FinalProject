@@ -6,8 +6,10 @@ import numpy as np
 import threading
 from projection.zoe_depth import ZoeDepth
 from projection.camera import get_intrinsic_matrix
+from projection.pipeline import reprojectImages
 import torch
 from PIL import Image
+import pickle
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
@@ -50,15 +52,17 @@ def clientthread(client_socket, client_id, clients):
                 data += client_socket.recv(BUF_SIZE)
             if received_clientID == 1:  # data for face detection received from client 1
                 faceCoordinate = data[:msg_size]
+                if faceCoordinate:
+                    faceCoordinate = list(pickle.loads(faceCoordinate))
+                else:
+                    faceCoordinate = [w//2, h//2] # if no face was detected, set faceCoordinate to the center of the client1 camera frame
                 dataFor2Dto3D = b""
             elif (
                 received_clientID == 2
             ):  # data for 2D to 3D reconstruction received from client 2
                 dataFor2Dto3D = data[:msg_size]
             data = data[msg_size:]
-            # print(dataFor2Dto3D)
-            # Print the user's face position (2D coordinate) for debugging purposes
-            # print(pickle.loads(faceCoordinate))
+            
 
             # Visualize received frame for debugging porposes only
             # frame = np.frombuffer(dataForFD, dtype=np.uint8)
@@ -67,9 +71,6 @@ def clientthread(client_socket, client_id, clients):
             # if cv2.waitKey(1) & 0xFF == ord('q'):
             #     break
 
-            # get intrinsic matrices
-            # get extrinsic matrices
-            # 
 
             if dataFor2Dto3D != b"":
                 joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8).reshape(w_2, h, c)
@@ -107,7 +108,8 @@ def clientthread(client_socket, client_id, clients):
                 R_r = np.eye(3)
                 t_r = np.zeros(3)
 
-                new_x, new_y = 0.0, 0.0  # TODO: face detection coordinates
+                new_x = faceCoordinate[0]
+                new_y = faceCoordinate[1]
 
                 reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l, K_r, R_r, t_r, new_x, new_y)
                 reprojected_image = cv2.cvtColor(reprojected_image, cv2.COLOR_RGB2BGR)
@@ -116,7 +118,7 @@ def clientthread(client_socket, client_id, clients):
 
                 # Send the 3D to 2D mapping result back to client 1
                 if received_clientID == 1:  # from client 1
-                    dataFor3Dto2D = dataFor3Dto2D.flatten().tobytes()
+                    dataFor3Dto2D = reprojected_image.flatten().tobytes()
                     client_socket.sendall(dataFor3Dto2D)
 
     finally:

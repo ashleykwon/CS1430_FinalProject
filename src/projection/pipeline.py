@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image
-from geometry import depth_to_points
+from .geometry import depth_to_points
 
 def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l, K_r, R_r, t_r, new_x, new_y) -> Image.Image:
     dataFor3Dto2D = rightCameraFrame

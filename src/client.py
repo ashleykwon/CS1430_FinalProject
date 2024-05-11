@@ -9,7 +9,6 @@ BUF_SIZE = 1280 * 720 * 6
 HOST = "10.39.56.2"
 PORT = 5000
 
-
 face_detector = FaceDetector("face_detection/detector_model.pb")
 
 
