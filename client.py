@@ -56,7 +56,7 @@ def send_and_receive_video():
     try:
         while True:
             ret, frame = cap.read()
-            
+
             # Do the face detection on faceDetectionInput
             faceCoordinates = detect_face(frame)
             
@@ -68,18 +68,18 @@ def send_and_receive_video():
             
             ##### COMMENT THE PART BELOW BACK IN WHEN RECONSTRUCTIONS ARE IMPLEMENTED### 
             # Receive video from the server through socket
-            # while len(received_data) < frameSize:
-            #     received_data += client_socket.recv(BUF_SIZE)
-            # rec_image_bytes = received_data[:frameSize]
-            # received_data = received_data[frameSize:]
+            while len(received_data) < frameSize:
+                received_data += client_socket.recv(BUF_SIZE)
+            rec_image_bytes = received_data[:frameSize]
+            received_data = received_data[frameSize:]
             
-            # # Read received_data in the same format sent by multiClientServer and display it as a video
-            # if rec_image_bytes:
-            #     rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8)
-            #     rec_image = rec_image.reshape(w, h, c)
-            #     cv2.imshow('Received', rec_image)
-            #     if cv2.waitKey(1) & 0xFF == ord('q'):
-            #         break
+            # Read received_data in the same format sent by multiClientServer and display it as a video
+            if rec_image_bytes:
+                rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8)
+                rec_image = rec_image.reshape(w, h, c)
+                cv2.imshow('Received', rec_image)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
              ##### COMMENT THE PART ABOVE BACK IN WHEN RECONSTRUCTIONS ARE IMPLEMENTED### 
      
     finally:

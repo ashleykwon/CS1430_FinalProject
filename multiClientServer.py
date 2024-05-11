@@ -89,7 +89,6 @@ def clientthread(client_socket, client_id, clients):
             # Send the 3D to 2D mapping result back to client 1
             if received_clientID == 1: # from client 1
                 dataFor3Dto2D = dataFor3Dto2D.flatten().tobytes()
-                dataFor3Dto2D = faceCoordinate
                 client_socket.sendall(dataFor3Dto2D)
           
     finally:
