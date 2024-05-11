@@ -26,7 +26,7 @@ HOST = '10.39.56.2'
 PORT = 5000
 
 def clientthread(client_socket, client_id, clients):
-    global dataForFD # video frame from 1 camera from client 1 for face detection 
+    global faceCoordinate # video frame from 1 camera from client 1 for face detection 
     global dataFor2Dto3D # video frames from 2 cameras from client 2 for 3D reconstruction
     global dataFor3Dto2D # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
 
@@ -54,28 +54,27 @@ def clientthread(client_socket, client_id, clients):
             while len(data) < msg_size:
                 data += client_socket.recv(BUF_SIZE)
             if received_clientID == 1: # data for face detection received from client 1
-                dataForFD = data[:msg_size]
+                faceCoordinate = data[:msg_size]
             elif received_clientID == 2: # data for 2D to 3D reconstruction received from client 2
                 dataFor2Dto3D = data[:msg_size] 
             data = data[msg_size:]
 
-            print(pickle.loads(dataForFD))
+            print(pickle.loads(faceCoordinate))
             
+            # Visualize received frame for debugging porposes only 
             # frame = np.frombuffer(dataForFD, dtype=np.uint8)
             # frame = frame.reshape(w, h, c)
             # cv2.imshow('Received', frame)
             # if cv2.waitKey(1) & 0xFF == ord('q'):
             #     break
             
-            # TODO 1: Do the face detection on faceDetectionInput
-
-            # faceDetectionInput = np.frombuffer(dataForFD, dtype=np.uint8)
-            # faceDetectionInput = faceDetectionInput.reshape(w, h, c) #this changes dataForFD into a numpy array with size (w, h, c)
-            # dataFor3Dto2D = detect_face(faceDetectionInput)
             
-            # dataFor3Dto2D = faceDetectionInput
-
             # TODO 2: Do the 2D to 3D reconstruction on dataFor2Dto3D
+            joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8)
+            joined_frames = joined_frames.reshape(w, h, c) #this changes dataForFD into a numpy array with size (w, h, c)
+            singleFrameWidth = int(w//2) # Assumes frames from the two video cameras are joined side by side
+            leftCameraFrame = joined_frames[:singleFrameWidth, :, :]
+            rightCameraFrame = joined_frames[singleFrameWidth:, :, :]
 
             # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
             # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
@@ -85,11 +84,12 @@ def clientthread(client_socket, client_id, clients):
             # print(frame.shape)
             # frame = frame.reshape(w, h, c)
             # cv2.imwrite('Received.png', frame) 
+            dataFor3Dto2D = rightCameraFrame # change this to the actual output
 
             # Send the 3D to 2D mapping result back to client 1
             if received_clientID == 1: # from client 1
-                # dataFor3Dto2D = dataFor3Dto2D.flatten().tobytes()
-                dataFor3Dto2D = dataForFD
+                dataFor3Dto2D = dataFor3Dto2D.flatten().tobytes()
+                dataFor3Dto2D = faceCoordinate
                 client_socket.sendall(dataFor3Dto2D)
           
     finally:

@@ -56,6 +56,8 @@ def send_and_receive_video():
     try:
         while True:
             ret, frame = cap.read()
+            
+            # Do the face detection on faceDetectionInput
             faceCoordinates = detect_face(frame)
             
             if faceCoordinates is not None:

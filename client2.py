@@ -30,7 +30,7 @@ def send_video():
     clientID = 2
 
     # Send the videos captured from two webcams to the server
-    client_socket.sendall(struct.pack("Q", w+w1) + struct.pack("Q", h+h1) + struct.pack("Q", c+c1) + struct.pack("Q", size) + struct.pack("Q", clientID)) # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+    client_socket.sendall(struct.pack("Q", w+w1) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID)) # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
     # client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID)) # UNCOMMENT THIS FOR DEBUGGING
     
     # send video
@@ -40,7 +40,7 @@ def send_video():
             ret1, frame1 = cap1.read() # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
             if not ret:
                 break
-            joined_frame = np.concatenate((frame, frame1)) # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+            joined_frame = np.hstack((frame, frame1)) # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
             joined_frame_data = joined_frame.flatten().tobytes() # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
             client_socket.sendall(joined_frame_data) # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
             # client_socket.sendall(frame) # UNCOMMENT THIS FOR DEBUGGING
