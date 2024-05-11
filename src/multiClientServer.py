@@ -7,7 +7,7 @@ import numpy as np
 import urllib.request
 import threading
 import pickle
-from ThreeD_projections.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
+from projection.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
 import intrinsics
 import torch
 from PIL import Image
