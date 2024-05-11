@@ -82,6 +82,7 @@ def clientthread(client_socket, client_id, clients):
 
             # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
             # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
+            # dataFor3Dto2D SHOULD BE A NUMPY ARRAY
 
             # FOR DEBUGGING PURPOSES ONLY: Check if dataForFD is a frame from the video captured by client 1
             # frame = np.frombuffer(dataForFD, dtype=np.uint8)
