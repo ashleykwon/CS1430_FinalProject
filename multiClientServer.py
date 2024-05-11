@@ -7,7 +7,7 @@ import numpy as np
 import urllib.request
 import threading
 import pickle
-from 3d_projections.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
+from ThreeD_projections.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
 import intrinsics
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
