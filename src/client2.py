@@ -2,18 +2,22 @@ import cv2
 import socket
 import struct
 import numpy as np
+import tyro
+import pickle
 
-HOST = "10.39.56.2"
-PORT = 5000
 
-
-def send_video():
+def send_video(
+    host: str = "10.39.56.2",
+    port: int = 5000,
+    left_calibration_file: str = 'left_camera.npy',
+    right_calibration_file: str = 'right_camera.npy',
+):
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        client_socket.connect((HOST, PORT))
+        client_socket.connect((host, port))
     except socket.error as e:
-        print(f"Error connecting to {HOST}:{PORT}: {e}")
+        print(f"Error connecting to {host}:{port}: {e}")
 
     # Start video capture using the two webcams
     cap0 = cv2.VideoCapture(0)
@@ -42,6 +46,13 @@ def send_video():
     )  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
     # client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID)) # UNCOMMENT THIS FOR DEBUGGING
 
+    K_l, R_l, t_l = np.load(left_calibration_file)
+    K_r, R_r, t_r = np.load(right_calibration_file)
+
+    calibration_bytes = pickle.dumps((K_l, R_l, t_l, K_r, R_r, t_r))
+    calibration_size = len(calibration_bytes)
+    client_socket.sendall(struct.pack("Q", calibration_size) + calibration_bytes)
+
     # send video
     try:
         while True:
@@ -66,4 +77,4 @@ def send_video():
 
 
 if __name__ == "__main__":
-    send_video()
+    tyro.cli(send_video)
