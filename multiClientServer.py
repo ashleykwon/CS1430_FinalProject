@@ -7,7 +7,7 @@ import numpy as np
 import urllib.request
 import threading
 import pickle
-from 3d_projections.zoe_projection import ZoeProjection
+from 3d_projections.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
@@ -73,6 +73,11 @@ def clientthread(client_socket, client_id, clients):
             # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
             # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
             # dataFor3Dto2D SHOULD BE A NUMPY ARRAY
+                intrinsicMatrix = np.asarray([[]]) # Should be the same across the two webcams and the client1's head (aka third camera)
+                leftCameraRt = np.zeros((3, 4))
+                translation = np.multiply(leftCameraRt[:,3], np.asarray([faceCoordinate[0], faceCoordinate[1], 0]))
+                rotation = np.zeros(3, 3)
+                extrinsicMatrix = np.hstack((rotation, translation)
 
             # FOR DEBUGGING PURPOSES ONLY: Check if dataForFD is a frame from the video captured by client 1
             # frame = np.frombuffer(dataForFD, dtype=np.uint8)
