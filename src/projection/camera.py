@@ -11,6 +11,3 @@ def get_intrinsic_matrix(fov_x, fov_y, W, H):
         [0, f_y, c_y],
         [0, 0, 1]
     ])
-
-if __name__ == '__main__':
-    print(get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080))

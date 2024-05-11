@@ -8,7 +8,7 @@ import urllib.request
 import threading
 import pickle
 from projection.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
-import intrinsics
+from projection.camera import get_intrinsic_matrix
 import torch
 from PIL import Image
 
@@ -80,7 +80,7 @@ def clientthread(client_socket, client_id, clients):
                 # print(rightCameraFrame.shape)
                 dataFor3Dto2D = rightCameraFrame
 
-                intrinsicMatrix = intrinsics.get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080)  # Should be the same across the two webcams and the client1's head (aka third camera)
+                intrinsicMatrix = get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080)  # Should be the same across the two webcams and the client1's head (aka third camera)
                 leftCameraRotation = np.asarray([
                     [0.9117811489826978, 0.07599962415662805,0.4035829449912901],
                     [-0.06867995442145704,0.9971058203375325,-0.03260440015830532],
