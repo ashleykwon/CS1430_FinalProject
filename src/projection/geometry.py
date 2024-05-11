@@ -41,3 +41,10 @@ def depth_to_points(depth, K, R, t):
 #         mask = mask.reshape(-1)
 #         triangles = triangles[mask[triangles].all(1)]
 #     return triangles
+
+# Tri-mesh
+# image = np.array(image)
+# verts = pts3d
+# triangles = create_triangles(image.shape[0], image.shape[1])
+# colors = image.reshape(-1, 3)
+# mesh = trimesh.Trimesh(vertices=pts3d, faces=triangles, vertex_colors=colors)

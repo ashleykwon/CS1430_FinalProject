@@ -7,7 +7,8 @@ import numpy as np
 import urllib.request
 import threading
 import pickle
-from projection.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
+from projection.geometry import depth_to_points
+from projection.zoe_depth import ZoeDepth
 from projection.camera import get_intrinsic_matrix
 import torch
 from PIL import Image
@@ -18,7 +19,7 @@ BUF_SIZE = 1280 * 720 * 2
 HOST = '10.39.56.2'
 PORT = 5000
 
-zoe_projector = ZoeProjection(device='cuda' if torch.cuda.is_available() else 'cpu')
+zoe_depth = ZoeDepth(device=('cuda' if torch.cuda.is_available() else 'cpu'))
 
 # dataFor2Dto3D = b''
 
@@ -73,8 +74,10 @@ def clientthread(client_socket, client_id, clients):
                 joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8)
                 joined_frames = joined_frames.reshape(w, h, c) #this changes dataForFD into a numpy array with size (w, h, c)
                 singleFrameWidth = int(w//2) # Assumes frames from the two video cameras are joined side by side
-                leftCameraFrame =  cv2.cvtColor(joined_frames[:singleFrameWidth, :, :], cv2.COLOR_BGR2RGB)
-                rightCameraFrame = cv2.cvtColor(joined_frames[singleFrameWidth:, :, :], cv2.COLOR_BGR2RGB)
+
+                leftCameraFrame, rightCameraFrame = joined_frames[:singleFrameWidth, :, :], joined_frames[singleFrameWidth:, :, :]
+                leftCameraFrame_pil = Image.fromarray(cv2.cvtColor(leftCameraFrame, cv2.COLOR_BGR2RGB))
+                rightCameraFrame_pil =  Image.fromarray(cv2.cvtColor(rightCameraFrame, cv2.COLOR_BGR2RGB))
                
                 # print(leftCameraFrame.shape)
                 # print(rightCameraFrame.shape)
@@ -87,12 +90,17 @@ def clientthread(client_socket, client_id, clients):
                     [-0.40489282559766104,0.002010019170952072, 0.9143619412478159]])
                 leftCameraTranslation = np.asarray([-19.269844497623666,1.1276310094741875, 5.48936711837891])
 
-                leftCameraTo3D = zoe_projector.to_3d_points(Image.fromarray(leftCameraFrame), intrinsicMatrix, leftCameraRotation, leftCameraTranslation)
-                rightCameraTo3D = zoe_projector.to_3d_points(Image.fromarray(rightCameraFrame), intrinsicMatrix, np.eye(3), np.zeros(3))
+                # TODO: can we do this in one pass?
+                leftCameraDepth = zoe_depth.get_depth(leftCameraFrame_pil)
+                rightCameraDepth = zoe_depth.get_depth(rightCameraFrame_pil)
+
+                leftCameraTo3D = depth_to_points(leftCameraDepth, intrinsicMatrix, leftCameraRotation, leftCameraTranslation)
+                rightCameraTo3D = depth_to_points(rightCameraDepth, intrinsicMatrix, np.eye(3), np.zeros(3))
+
                 # print(leftCameraTo3D.shape)
                 # print(rightCameraTo3D.shape)
-            
-           
+
+
             # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
             # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
             # dataFor3Dto2D SHOULD BE A NUMPY ARRAY
