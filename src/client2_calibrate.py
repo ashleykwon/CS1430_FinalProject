@@ -21,7 +21,7 @@ def main(
     K_r = get_intrinsic_matrix(fov_x=fov_x, fov_y=fov_y, W=W, H=H)
     R_l, t_l, R_r, t_r = stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_mm)
     np.save(left_camera_output_file, (K_l, R_l, t_l))
-    np.save(left_camera_output_file, (K_r, R_r, t_r))
+    np.save(right_camera_output_file, (K_r, R_r, t_r))
 
 if __name__ == '__main__':
     tyro.cli(main)
