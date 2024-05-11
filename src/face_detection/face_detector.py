@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
+
 class FaceDetector:
     def __init__(self, model_path):
         """
@@ -8,19 +9,19 @@ class FaceDetector:
             model_path: a string, path to a pb file.
             visible_device_list: a string.
         """
-        with tf.io.gfile.GFile(model_path, 'rb') as f:
+        with tf.io.gfile.GFile(model_path, "rb") as f:
             graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
 
         graph = tf.Graph()
         with graph.as_default():
-            tf.import_graph_def(graph_def, name='import')
+            tf.import_graph_def(graph_def, name="import")
 
-        self.input_image = graph.get_tensor_by_name('import/image_tensor:0')
+        self.input_image = graph.get_tensor_by_name("import/image_tensor:0")
         self.output_ops = [
-            graph.get_tensor_by_name('import/boxes:0'),
-            graph.get_tensor_by_name('import/scores:0'),
-            graph.get_tensor_by_name('import/num_boxes:0'),
+            graph.get_tensor_by_name("import/boxes:0"),
+            graph.get_tensor_by_name("import/scores:0"),
+            graph.get_tensor_by_name("import/num_boxes:0"),
         ]
 
         config_proto = tf.compat.v1.ConfigProto(log_device_placement=False)
@@ -53,7 +54,7 @@ class FaceDetector:
         boxes = boxes[to_keep]
         scores = scores[to_keep]
 
-        scaler = np.array([h, w, h, w], dtype='float32')
+        scaler = np.array([h, w, h, w], dtype="float32")
         boxes = boxes * scaler
 
         return boxes, scores
