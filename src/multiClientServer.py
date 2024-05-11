@@ -44,6 +44,11 @@ def client_thread_function(client_socket):
     received_clientID = struct.unpack("Q", data[:payload_size])[0]
     data = data[payload_size:]
 
+    # TODO:
+    # if client 2
+    # get calibration matrices
+    # K_l, R_l, t_l, K_r, R_r, t_r = pickle.loads(incoming_bytes)
+
     try:
         while True:
             # Receive data from client sockets
