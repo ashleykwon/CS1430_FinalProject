@@ -16,6 +16,8 @@ BUF_SIZE = 1280 * 720 * 2
 HOST = '10.39.56.2'
 PORT = 5000
 
+zoe_projector = ZoeProjection()
+
 def clientthread(client_socket, client_id, clients):
     global faceCoordinate # video frame from 1 camera from client 1 for face detection
     global dataFor2Dto3D # video frames from 2 cameras from client 2 for 3D reconstruction
@@ -71,20 +73,28 @@ def clientthread(client_socket, client_id, clients):
                 rightCameraFrame = joined_frames[singleFrameWidth:, :, :]
                 dataFor3Dto2D = rightCameraFrame
 
-            # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
-            # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
-            # dataFor3Dto2D SHOULD BE A NUMPY ARRAY
-                
+                intrinsicMatrix = intrinsics.get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080)  # Should be the same across the two webcams and the client1's head (aka third camera)
                 leftCameraRotation = np.asarray([
                     [0.9117811489826978, 0.07599962415662805,0.4035829449912901],
                     [-0.06867995442145704,0.9971058203375325,-0.03260440015830532],
                     [-0.40489282559766104,0.002010019170952072, 0.9143619412478159]])
                 leftCameraTranslation = np.asarray([[-19.269844497623666],[1.1276310094741875],[5.48936711837891]])
-                translation = np.multiply(leftCameraTranslation, np.asarray([faceCoordinate[0], faceCoordinate[1], 0]))
-                rotation = np.zeros(3, 3)
 
-                extrinsicMatrix = np.hstack((rotation, translation))
-                intrinsicMatrix = intrinsics.get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080) # Should be the same across the two webcams and the client1's head (aka third camera)
+                leftCameraTo3D = zoe_projector.to_3d_points(leftCameraFrame, intrinsicMatrix, leftCameraRotation, leftCameraTranslation)
+                rightCameraTo3D = zoe_projector.to_3d_points(rightCameraFrame, intrinsicMatrix, np.identity(3), np.zeros(3))
+                print(leftCameraTo3D.shape)
+                print(rightCameraTo3D.shape)
+           
+           
+            # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
+            # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
+            # dataFor3Dto2D SHOULD BE A NUMPY ARRAY
+                
+                
+                # translation = np.multiply(leftCameraTranslation, np.asarray([faceCoordinate[0], faceCoordinate[1], 0]))
+                # rotation = np.zeros(3, 3)
+
+                # extrinsicMatrix = np.hstack((rotation, translation))
 
                 # Use the extrinsic and the intrinsic matrices to get uv coordinates
 
