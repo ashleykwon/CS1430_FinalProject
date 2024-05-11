@@ -9,7 +9,6 @@ BUF_SIZE = 1280 * 720 * 6
 HOST = "10.39.56.2"
 PORT = 5000
 
-
 face_detector = FaceDetector("face_detection/detector_model.pb")
 
 
@@ -46,7 +45,6 @@ def send_and_receive_video():
     faceCoordinates = detect_face(frame)
     face_bytes = pickle.dumps(faceCoordinates)
     size = len(face_bytes)
-    print('size: ' + str(size))
     clientID = 1
 
     # Send frame metadata (width, height, channel, size, client ID) to the server ONCE
