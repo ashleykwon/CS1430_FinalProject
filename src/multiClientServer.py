@@ -4,9 +4,8 @@ import struct
 import cv2
 import numpy as np
 import threading
-from src.projection.pipeline import reprojectImages
-from src.projection.zoe_depth import ZoeDepth
-from src.projection.camera import get_intrinsic_matrix
+from projection.zoe_depth import ZoeDepth
+from projection.camera import get_intrinsic_matrix
 import torch
 from PIL import Image
 
