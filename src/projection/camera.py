@@ -8,3 +8,8 @@ def get_intrinsic_matrix(fov_x, fov_y, W, H):
     c_x = W / 2
     c_y = H / 2
     return np.array([[f_x, s, c_x], [0, f_y, c_y], [0, 0, 1]])
+
+
+def stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_mm):
+    pass
+    # return R_l, t_l, R_r, t_r
