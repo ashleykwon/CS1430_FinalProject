@@ -87,12 +87,26 @@ def calibrate_cameras():
         
     # Calibrating left camera
     retL, mtxL, distL, rvecsL, tvecsL = cv.calibrateCamera(objpoints,imgpointsL,imgL_gray.shape[::-1],None,None)
+    mtxL = np.array(
+        [
+            [1102.40922, 0., 960],
+            [0., 1102.40922, 540],
+            [0., 0., 1.]
+        ]
+    )
     camLInt = np.asarray(mtxL).tolist()
     # hL,wL= imgL_gray.shape[:2]
     # new_mtxL, roiL= cv.getOptimalNewCameraMatrix(mtxL,distL,(wL,hL),1,(wL,hL))
     
     # Calibrating right camera
     retR, mtxR, distR, rvecsR, tvecsR = cv.calibrateCamera(objpoints,imgpointsR,imgR_gray.shape[::-1],None,None)
+    mtxR = np.array(
+        [
+            [1102.40922, 0., 960],
+            [0., 1102.40922, 540],
+            [0., 0., 1.]
+        ]
+    )
     camRInt = np.asarray(mtxR).tolist()
     # hR,wR= imgR_gray.shape[:2]
     # new_mtxR, roiR= cv2.getOptimalNewCameraMatrix(mtxR,distR,(wR,hR),1,(wR,hR))
@@ -295,80 +309,24 @@ def disparity(img_l, img_r):
 # 7 Proj (2D image, depth) => 3D point cloud
 # 8 3D => 2D proj. using pseudo camera with derived extrinsics
 
-def get_intrinsics(H,W):
-    """
-    Intrinsics for a pinhole camera model.
-    Assume fov of 55 degrees and central principal point.
-    """
-    # f = 0.5 * W / np.tan(0.5 * 55 * np.pi / 180.0)
-    # cx = 0.5 * W
-    # cy = 0.5 * H
-    with open('camL.json', 'r') as openfile:
-        # Reading from json file
-        camL = json.load(openfile)
-        camL = {'mtx': np.asarray(camL['mtx']),
-                'dist': np.asarray(camL['dist']),
-                'rvecs': np.asarray(camL['rvecs']),
-                'tvecs': np.asarray(camL['tvecs'])}
-    return camL['mtx']
-    # return np.array([[f, 0, cx],
-    #                  [0, f, cy],
-    #                  [0, 0, 1]])
-
-def depth_to_points(depth, R=None, t=None):
-
-    K = get_intrinsics(depth.shape[1], depth.shape[2])
-    Kinv = np.linalg.inv(K)
-    if R is None:
-        R = np.eye(3)
-    if t is None:
-        t = np.zeros(3)
-
-    # M converts from your coordinate to PyTorch3D's coordinate system
-    M = np.eye(3)
-    M[0, 0] = -1.0
-    M[1, 1] = -1.0
-
-    height, width = depth.shape[1:3]
-
-    x = np.arange(width)
-    y = np.arange(height)
-    coord = np.stack(np.meshgrid(x, y), -1)
-    coord = np.concatenate((coord, np.ones_like(coord)[:, :, [0]]), -1)  # z=1
-    coord = coord.astype(np.float32)
-    # coord = torch.as_tensor(coord, dtype=torch.float32, device=device)
-    coord = coord[None]  # bs, h, w, 3
-
-    D = depth[:, :, :, None, None]
-    # print(D.shape, Kinv[None, None, None, ...].shape, coord[:, :, :, :, None].shape )
-    pts3D_1 = D * Kinv[None, None, None, ...] @ coord[:, :, :, :, None]
-    # pts3D_1 live in your coordinate system. Convert them to Py3D's
-    pts3D_1 = M[None, None, None, ...] @ pts3D_1
-    # from reference to targe tviewpoint
-    pts3D_2 = R[None, None, None, ...] @ pts3D_1 + t[None, None, None, :, None]
-    # pts3D_2 = pts3D_1
-    # depth_2 = pts3D_2[:, :, :, 2, :]  # b,1,h,w
-    return pts3D_2[:, :, :, :3, 0][0]
-
 
 if __name__ == '__main__':
-    take_calibration_images()
-    calibrate_cameras()
+    # take_calibration_images()
+    # calibrate_cameras()
     camLInt, camRInt, camLExt, camRExt, Q = get_calibrations()
-    print(camLInt)
-    print(camRInt)
-    print(camLExt)
-    print(camRExt)
-    print(Q)
 
     # take_stereo_images()
-    # img_1, img_2, pts_1, pts_2 = features_and_matching()
-    # if len(pts_1) < 9:
-    #     print("rip")
-    # F, pts_1, pts_2, img_L, img_R = images_with_epipolars(img_1, img_2, pts_1, pts_2)
-    # img1_rect, img2_rect = stereo_rectification(F, pts_1, pts_2, img_L, img_R)
-    # disp = disparity(img1_rect, img2_rect)
-    # depth = cv.reprojectImageTo3D(disp, Q)
+    img_1, img_2, pts_1, pts_2 = features_and_matching()
+    if len(pts_1) < 9:
+        print("rip")
+    F, pts_1, pts_2, img_L, img_R = images_with_epipolars(img_1, img_2, pts_1, pts_2)
+    img1_rect, img2_rect = stereo_rectification(F, pts_1, pts_2, img_L, img_R)
+    disp = disparity(img1_rect, img2_rect)
+    depth = cv.reprojectImageTo3D(disp, Q)
+    print(depth)
+    plt.imshow(depth)
+    plt.show(depth)
+
 
     # torch.hub.help("intel-isl/MiDaS", "DPT_BEiT_L_384", force_reload=True)  # Triggers fresh download of MiDaS repo
     # DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
