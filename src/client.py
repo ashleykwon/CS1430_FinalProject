@@ -3,7 +3,7 @@ import socket
 import struct
 import numpy as np
 import pickle
-from .face_detection.face_detector import FaceDetector
+from src.face_detection.face_detector import FaceDetector
 
 BUF_SIZE = 1280 * 720 * 6
 HOST = "10.39.56.2"
