@@ -9,6 +9,7 @@ import threading
 import pickle
 from ThreeD_projections.zoe_projection import ZoeProjection #maybe change the folder name to ThreeD_projections
 import intrinsics
+import torch
 
 # Referenced from https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 
@@ -16,7 +17,7 @@ BUF_SIZE = 1280 * 720 * 2
 HOST = '10.39.56.2'
 PORT = 5000
 
-zoe_projector = ZoeProjection()
+zoe_projector = ZoeProjection(device='cuda' if torch.cuda.is_available() else 'cpu')
 
 def clientthread(client_socket, client_id, clients):
     global faceCoordinate # video frame from 1 camera from client 1 for face detection
