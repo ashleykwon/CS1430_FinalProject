@@ -20,10 +20,10 @@ def prepare_initial_payload(cap0, cap1, left_calibration_file, right_calibration
     # size = len(data) # UNCOMMENT THIS FOR DEBUGGING
     clientID = 2
 
-    K_l, R_l, t_l = pickle.load(open(left_calibration_file, "rb"))
-    K_r, R_r, t_r = pickle.load(open(right_calibration_file, "rb"))
+    K_l, dist_l, R_l, t_l = pickle.load(open(left_calibration_file, "rb"))
+    K_r, dist_r, R_r, t_r = pickle.load(open(right_calibration_file, "rb"))
 
-    calibration_bytes = pickle.dumps((K_l, R_l, t_l, K_r, R_r, t_r))
+    calibration_bytes = pickle.dumps((K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r))
     calibration_size = len(calibration_bytes)
 
     payload_bytes = (

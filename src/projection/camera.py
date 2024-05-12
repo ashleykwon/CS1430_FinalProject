@@ -47,71 +47,39 @@ def stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_meters):
             cornersR = cv2.cornerSubPix(imgR_gray, cornersR, (11, 11), (-1, -1), criteria)
             imgpointsR.append(cornersR)
 
-    K_l_, distL = cv2.calibrateCamera(
+    dist_l = cv2.calibrateCamera(
         objectPoints=objpoints,
         imagePoints=imgpointsL,
         imageSize=chessboard_images[0][0].shape[:2][::-1],
         cameraMatrix=None,
-        distCoeffs=None,
-        # cameraMatrix=K_l.copy(),
-        # distCoeffs=None,
-        # flags=(cv2.CALIB_FIX_FOCAL_LENGTH | cv2.CALIB_FIX_PRINCIPAL_POINT
-    )[1:3]
+        distCoeffs=None
+    )[2]
 
-    K_r_, distR = cv2.calibrateCamera(
+    dist_r = cv2.calibrateCamera(
         objectPoints=objpoints,
         imagePoints=imgpointsR,
         imageSize=chessboard_images[0][1].shape[:2][::-1],
         cameraMatrix=None,
         distCoeffs=None,
-        # cameraMatrix=K_r,
-        # distCoeffs=None,
-        # flags=(cv2.CALIB_FIX_FOCAL_LENGTH | cv2.CALIB_FIX_PRINCIPAL_POINT)
-    )[1:3]
-
-    print("K_l")
-    print(K_l)
-    print("K_l_")
-    print(K_l_)
-
-    print("K_r")
-    print(K_r)
-    print("K_r_")
-    print(K_r_)
-
-    print("distL")
-    print(distL)
-    print("distR")
-    print(distR)
+    )[2]
 
     criteria_stereo = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    # This step is performed to transformation between the two cameras and calculate Essential and Fundamental matrix
-    retS, mtxL, distL, mtxR, distR, Rot, Trns, Emat, Fmat = cv2.stereoCalibrate(
+    # Calculate the rotation and translation between the two cameras
+    R_l = np.identity(3)
+    t_l = np.zeros(3)
+
+    R_r, t_r = cv2.stereoCalibrate(
         objectPoints=objpoints,
         imagePoints1=imgpointsL,
         imagePoints2=imgpointsR,
         cameraMatrix1=K_l,
-        distCoeffs1=distL,
+        distCoeffs1=dist_l,
         cameraMatrix2=K_r,
-        distCoeffs2=distR,
+        distCoeffs2=dist_r,
         imageSize=chessboard_images[0][0].shape[:2][::-1],
         flags=cv2.CALIB_FIX_INTRINSIC,
         criteria=criteria_stereo,
-    )
+    )[5:7]
 
-    R_l = Rot
-    t_l = Trns
-    R_r = np.identity(3)
-    t_r = np.zeros(3)
-
-    print("R_l")
-    print(R_l)
-    print("t_l")
-    print(t_l)
-    print("R_r")
-    print(R_r)
-    print("t_r")
-    print(t_r)
-
-    return R_l, t_l, R_r, t_r
+    return K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r

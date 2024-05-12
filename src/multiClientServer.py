@@ -54,13 +54,11 @@ def client_thread_function(client_socket):
         calibration_size = struct.unpack("Q", data[:payload_size])[0]
         data = data[payload_size:]
         # Load calibration matrices
-        calibrationMatrices = list(pickle.loads(data[:calibration_size]))
+        calibrationMatrices = pickle.loads(data[:calibration_size])
         data = data[calibration_size:]
     else:
         calibration_size = 0
         calibrationMatrices = []
-    # get calibration matrices
-    # K_l, R_l, t_l, K_r, R_r, t_r = pickle.loads(incoming_bytes)
 
     try:
         while True:
@@ -101,20 +99,12 @@ def client_thread_function(client_socket):
                     cv2.cvtColor(joined_frames[w:, :, :], cv2.COLOR_BGR2RGB)
                 )
 
-                # Calibration matrices for the left camera
-                K_l = calibrationMatrices[0]
-                R_l = calibrationMatrices[1]
-                t_l = calibrationMatrices[2]
-                
-                # Calibration matrices for the right camera
-                K_r = calibrationMatrices[3]
-                R_r = calibrationMatrices[4]
-                t_r = calibrationMatrices[5]
+                K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r = calibrationMatrices
 
                 new_x = faceCoordinate[0]
                 new_y = faceCoordinate[1]
 
-                reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l, K_r, R_r, t_r, new_x, new_y)
+                reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
                 # reprojected_image = cv2.cvtColor(reprojected_image, cv2.COLOR_RGB2BGR)
 
                 # TODO: send reprojected image back
