@@ -88,6 +88,7 @@ def calibrate_cameras():
     retL, mtxL, distL, rvecsL, tvecsL = cv.calibrateCamera(
         objpoints, imgpointsL, imgL_gray.shape[::-1], None, None
     )
+    print(mtxL)
     mtxL = np.array([[1102.40922, 0.0, 960], [0.0, 1102.40922, 540], [0.0, 0.0, 1.0]])
     camLInt = np.asarray(mtxL).tolist()
     # hL,wL= imgL_gray.shape[:2]
@@ -97,6 +98,7 @@ def calibrate_cameras():
     retR, mtxR, distR, rvecsR, tvecsR = cv.calibrateCamera(
         objpoints, imgpointsR, imgR_gray.shape[::-1], None, None
     )
+    print(mtxR)
     mtxR = np.array([[1102.40922, 0.0, 960], [0.0, 1102.40922, 540], [0.0, 0.0, 1.0]])
     camRInt = np.asarray(mtxR).tolist()
     # hR,wR= imgR_gray.shape[:2]
@@ -306,21 +308,21 @@ def disparity(img_l, img_r):
 
 
 if __name__ == "__main__":
-    # take_calibration_images()
-    # calibrate_cameras()
-    camLInt, camRInt, camLExt, camRExt, Q = get_calibrations()
+    take_calibration_images()
+    calibrate_cameras()
+    # camLInt, camRInt, camLExt, camRExt, Q = get_calibrations()
 
     # take_stereo_images()
-    img_1, img_2, pts_1, pts_2 = features_and_matching()
-    if len(pts_1) < 9:
-        print("rip")
-    F, pts_1, pts_2, img_L, img_R = images_with_epipolars(img_1, img_2, pts_1, pts_2)
-    img1_rect, img2_rect = stereo_rectification(F, pts_1, pts_2, img_L, img_R)
-    disp = disparity(img1_rect, img2_rect)
-    depth = cv.reprojectImageTo3D(disp, Q)
-    print(depth)
-    plt.imshow(depth)
-    plt.show(depth)
+    # img_1, img_2, pts_1, pts_2 = features_and_matching()
+    # if len(pts_1) < 9:
+    #     print("rip")
+    # F, pts_1, pts_2, img_L, img_R = images_with_epipolars(img_1, img_2, pts_1, pts_2)
+    # img1_rect, img2_rect = stereo_rectification(F, pts_1, pts_2, img_L, img_R)
+    # disp = disparity(img1_rect, img2_rect)
+    # depth = cv.reprojectImageTo3D(disp, Q)
+    # print(depth)
+    # plt.imshow(depth)
+    # plt.show(depth)
 
     # torch.hub.help("intel-isl/MiDaS", "DPT_BEiT_L_384", force_reload=True)  # Triggers fresh download of MiDaS repo
     # DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'

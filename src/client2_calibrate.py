@@ -28,7 +28,7 @@ def main(
     left_camera_output_file: str = 'left_camera.npy',
     right_camera_output_file: str = 'right_camera.npy',
 ):
-    chessboard_images = collect_images(N=10)
+    chessboard_images = collect_images(N)
     K_l = get_intrinsic_matrix(fov_x=fov_x, fov_y=fov_y, W=W, H=H)
     K_r = get_intrinsic_matrix(fov_x=fov_x, fov_y=fov_y, W=W, H=H)
     R_l, t_l, R_r, t_r = stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_mm)
