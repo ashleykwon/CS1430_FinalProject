@@ -1,10 +1,28 @@
+import os
 import numpy as np
 from projection.camera import get_intrinsic_matrix, stereo_calibration
 import tyro
+import cv2 as cv
+from tqdm import tqdm
+import time
 
 
 def collect_images(N: int =10):
-    pass
+    if not os.path.exists("1"):
+        os.makedirs("1")
+    if not os.path.exists("2"):
+        os.makedirs("2")
+    cap1 = cv.VideoCapture(0)
+    cap2 = cv.VideoCapture(1)
+    chessboard_images = []
+    for i in tqdm(range(N)):
+        time.sleep(2)
+        _, frame1 = cap1.read()
+        _, frame2 = cap2.read()
+        chessboard_images.append([frame1, frame2])
+        cv.imwrite("1/" + str(i) + ".jpg", frame1)
+        cv.imwrite("2/" + str(i) + ".jpg", frame2)
+    return chessboard_images
 
 def main(
     N: int = 10,
