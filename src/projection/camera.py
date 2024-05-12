@@ -16,14 +16,14 @@ def get_intrinsic_matrix(fov_x, fov_y, W, H):
     return np.array([[f_x, s, c_x], [0, f_y, c_y], [0, 0, 1]])
 
 
-def stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_mm):
+def stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_meters):
     # termination criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
     objp = np.zeros((10 * 7, 3), np.float32)
     objp[:, :2] = np.mgrid[:7, :10].T.reshape(-1, 2)
-    # objp = objp * chess_box_size_mm
+    objp = objp * chess_box_size_meters
 
     # Arrays to store object points and image points from all the images.
     objpoints = []  # 3d point in real world space

@@ -21,7 +21,7 @@ def collect_images(N: int =10):
 
 def main(
     N: int = 10,
-    chess_box_size_mm: int = 23,
+    chess_box_size_meters: float = 0.0235,
     fov_x: float = 82.1,
     fov_y: float = 52.2,
     W: int = 1920,
@@ -32,7 +32,7 @@ def main(
     chessboard_images = collect_images(N)
     K_l = get_intrinsic_matrix(fov_x=fov_x, fov_y=fov_y, W=W, H=H)
     K_r = get_intrinsic_matrix(fov_x=fov_x, fov_y=fov_y, W=W, H=H)
-    R_l, t_l, R_r, t_r = stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_mm)
+    R_l, t_l, R_r, t_r = stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_meters)
     pickle.dump((K_l, R_l, t_l), open(left_camera_output_file, "wb"))
     pickle.dump((K_r, R_r, t_r), open(right_camera_output_file, "wb"))
 
