@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 from .geometry import depth_to_points
+import cv2
 
 def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l, K_r, R_r, t_r, new_x, new_y) -> Image.Image:
     dataFor3Dto2D = rightCameraFrame
@@ -14,7 +15,8 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l,
         K_l, R_l, t_l
     )
     rightCameraTo3D = depth_to_points(
-        rightCameraDepth, K_r, R_r, t_r
+        rightCameraDepth, 
+        K_r, R_r, t_r
     )
 
     # print(leftCameraTo3D.shape)
@@ -25,24 +27,19 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l,
     rightCamExtrinsicMatrix = np.hstack((R_r, t_r))
     leftCamFrameReconstructed = np.linalg.inv(K_l)@np.linalg.inv(leftCamExtrinsicMatrix)@leftCameraTo3D
     rightCamFrameReconstructed = np.linalg.inv(K_r)@np.linalg.inv(rightCamExtrinsicMatrix)@rightCameraTo3D
-    cv2.imwrite('left_frame_reconstructed.jpg', )
-
+    cv2.imwrite('left_frame_reconstructed.png', leftCamFrameReconstructed)
+    cv2.imwrite('right_frame_reconstructed.png', rightCamFrameReconstructed)
 
     # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
 
+    # Get the 2D to 3D mapping information using how points in leftCameraFrame get mapped to leftCameraTo3D AND the RGB values of those points
+    w, h, c = leftCameraFrame.shape
+    leftCamFrameFlat = leftCameraFrame.reshape(w*h, c) # RGB values from the left camera frame
+    rightCamFrameFlat = rightCameraFrame.reshape(w*h, c) # RGB values from the right camera frame
 
-    # translation = np.multiply(leftCameraTranslation, np.asarray([faceCoordinate[0], faceCoordinate[1], 0]))
-    # rotation = np.zeros(3, 3)
+    # Derive a new extrinsic matrix for the third camera (user's head) with new_x and new_y
+    
+    # Use cv2.projectPoints to derive dataFor3Dto2D (3D points mapped to a 2D image)
 
-    # extrinsicMatrix = np.hstack((rotation, translation))
-
-    # Use the extrinsic and the intrinsic matrices to get uv coordinates
     dataFor3Dto2D = rightCameraFrame  # change this to an actual output
     return dataFor3Dto2D
-
-    # FOR DEBUGGING PURPOSES ONLY: Check if dataForFD is a frame from the video captured by client 1
-    # frame = np.frombuffer(dataForFD, dtype=np.uint8)
-    # print(frame.shape)
-    # frame = frame.reshape(w, h, c)
-    # cv2.imwrite('Received.png', frame)
-    # dataFor3Dto2D = rightCameraFrame # change this to the actual output
