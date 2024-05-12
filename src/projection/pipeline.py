@@ -5,7 +5,6 @@ from .geometry import depth_to_points
 def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l, K_r, R_r, t_r, new_x, new_y) -> Image.Image:
     dataFor3Dto2D = rightCameraFrame
 
-
     # TODO: can we do this in one pass?
     leftCameraDepth = zoe_depth.get_depth(leftCameraFrame)
     rightCameraDepth = zoe_depth.get_depth(rightCameraFrame)
@@ -21,9 +20,16 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, R_l, t_l,
     # print(leftCameraTo3D.shape)
     # print(rightCameraTo3D.shape)
 
+    # Sanity check to see if we can project leftCameraTo3D and rightCameraTo3D back to 2D images. Comment this out when actually running the code
+    leftCamExtrinsicMatrix = np.hstack((R_l, t_l))
+    rightCamExtrinsicMatrix = np.hstack((R_r, t_r))
+    leftCamFrameReconstructed = np.linalg.inv(K_l)@np.linalg.inv(leftCamExtrinsicMatrix)@leftCameraTo3D
+    rightCamFrameReconstructed = np.linalg.inv(K_r)@np.linalg.inv(rightCamExtrinsicMatrix)@rightCameraTo3D
+    cv2.imwrite('left_frame_reconstructed.jpg', )
+
+
     # TODO 3: Do the 3D to 2D mapping + viewing angle modification based on face detection and save the result in dataFor3Dto2D
-    # dataFor3Dto2D = b'sample output' # Change this to the actual output to client 1
-    # dataFor3Dto2D SHOULD BE A NUMPY ARRAY
+
 
     # translation = np.multiply(leftCameraTranslation, np.asarray([faceCoordinate[0], faceCoordinate[1], 0]))
     # rotation = np.zeros(3, 3)

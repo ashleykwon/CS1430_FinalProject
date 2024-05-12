@@ -36,6 +36,20 @@ def send_video(
     # size = len(data) # UNCOMMENT THIS FOR DEBUGGING
     clientID = 2
 
+    # K_l = np.zeros((4,3))
+    # R_l = np.eye(3)
+    # t_l = np.zeros(3)
+
+    # K_r = np.zeros((4,3))
+    # R_r = np.eye(3)
+    # t_r = np.zeros(3)
+    K_l, R_l, t_l = np.load(left_calibration_file)
+    K_r, R_r, t_r = np.load(right_calibration_file)
+
+    calibration_bytes = pickle.dumps((K_l, R_l, t_l, K_r, R_r, t_r))
+    calibration_size = len(calibration_bytes)
+    # client_socket.sendall(calibration_bytes)
+
     # Send the videos captured from two webcams to the server
     client_socket.sendall(
         struct.pack("Q", w + w1)
@@ -43,15 +57,11 @@ def send_video(
         + struct.pack("Q", c)
         + struct.pack("Q", size)
         + struct.pack("Q", clientID)
+        + struct.pack("Q", calibration_size) 
+        + calibration_bytes
     )  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-    # client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID)) # UNCOMMENT THIS FOR DEBUGGING
-
-    K_l, R_l, t_l = np.load(left_calibration_file)
-    K_r, R_r, t_r = np.load(right_calibration_file)
-
-    calibration_bytes = pickle.dumps((K_l, R_l, t_l, K_r, R_r, t_r))
-    calibration_size = len(calibration_bytes)
-    client_socket.sendall(struct.pack("Q", calibration_size) + calibration_bytes)
+    
+    # client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID) + struct.pack("Q", calibration_size) + calibration_bytes) # UNCOMMENT THIS FOR DEBUGGING
 
     # send video
     try:
