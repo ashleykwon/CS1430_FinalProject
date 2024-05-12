@@ -25,7 +25,8 @@ def client_thread_function(client_socket):
     global faceCoordinate  # video frame from 1 camera from client 1 for face detection
     global dataFor2Dto3D  # video frames from 2 cameras from client 2 for 3D reconstruction
     global dataFor3Dto2D  # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
-
+    global calibration_size # calibration matrix size from client 2
+    global calibrationMatrices # list with calibration matrices from client 2
     data = client_socket.recv(BUF_SIZE)
     payload_size = struct.calcsize("Q")
 
@@ -46,6 +47,16 @@ def client_thread_function(client_socket):
 
     # TODO:
     # if client 2
+    if received_clientID == 2:
+        # Load calibration matrix size
+        calibration_size = struct.unpack("Q", data[:payload_size])[0]
+        data = data[payload_size:]
+        # Load calibration matrices
+        calibrationMatrices = list(pickle.loads(data[:calibration_size]))
+        data = data[calibration_size:]
+    else:
+        calibration_size = 0
+        calibrationMatrices = []
     # get calibration matrices
     # K_l, R_l, t_l, K_r, R_r, t_r = pickle.loads(incoming_bytes)
 
@@ -88,29 +99,15 @@ def client_thread_function(client_socket):
                     cv2.cvtColor(joined_frames[w:, :, :], cv2.COLOR_BGR2RGB)
                 )
 
-                K_l = get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080)
-                K_r = get_intrinsic_matrix(fov_x=82.1, fov_y=52.2, W=1920, H=1080)
-                R_l = np.asarray(
-                    [
-                        [0.9117811489826978, 0.07599962415662805, 0.4035829449912901],
-                        [
-                            -0.06867995442145704,
-                            0.9971058203375325,
-                            -0.03260440015830532,
-                        ],
-                        [
-                            -0.40489282559766104,
-                            0.002010019170952072,
-                            0.9143619412478159,
-                        ],
-                    ]
-                )
-                t_l = np.asarray(
-                    [-19.269844497623666, 1.1276310094741875, 5.48936711837891]
-                )
-
-                R_r = np.eye(3)
-                t_r = np.zeros(3)
+                # Calibration matrices for the left camera
+                K_l = calibrationMatrices[0]
+                R_l = calibrationMatrices[1]
+                t_l = calibrationMatrices[2]
+                
+                # Calibration matrices for the right camera
+                K_r = calibrationMatrices[3]
+                R_r = calibrationMatrices[4]
+                t_r = calibrationMatrices[5]
 
                 new_x = faceCoordinate[0]
                 new_y = faceCoordinate[1]
