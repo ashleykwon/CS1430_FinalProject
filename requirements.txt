@@ -1,8 +1,9 @@
 timm==0.6.7
-numpy
-opencv-python
-matplotlib
-torch
-plotly
-tensorflow
-tyro
+numpy==1.26.4
+opencv-python==4.9.0.80
+opencv-contrib-python==4.9.0.80
+matplotlib==3.8.4
+torch==2.2.2
+plotly==5.22.0
+tensorflow==2.16.1
+tyro==0.8.4
