@@ -6,23 +6,7 @@ import tyro
 import pickle
 
 
-def send_video(
-    host: str = "10.39.56.2",
-    port: int = 5000,
-    left_calibration_file: str = 'left_camera.npy',
-    right_calibration_file: str = 'right_camera.npy',
-):
-    # Connect to server
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        client_socket.connect((host, port))
-    except socket.error as e:
-        print(f"Error connecting to {host}:{port}: {e}")
-
-    # Start video capture using the two webcams
-    cap0 = cv2.VideoCapture(0)
-    cap1 = cv2.VideoCapture(1)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-
+def prepare_initial_payload(cap0, cap1, left_calibration_file, right_calibration_file):
     # get frame size and generate client ID
     ret, frame = cap0.read()
     ret1, frame1 = cap1.read()  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
@@ -36,31 +20,45 @@ def send_video(
     # size = len(data) # UNCOMMENT THIS FOR DEBUGGING
     clientID = 2
 
-    # K_l = np.zeros((4,3))
-    # R_l = np.eye(3)
-    # t_l = np.zeros(3)
-
-    # K_r = np.zeros((4,3))
-    # R_r = np.eye(3)
-    # t_r = np.zeros(3)
-    K_l, R_l, t_l = np.load(left_calibration_file)
-    K_r, R_r, t_r = np.load(right_calibration_file)
+    K_l, R_l, t_l = pickle.load(open(left_calibration_file, "rb"))
+    K_r, R_r, t_r = pickle.load(open(right_calibration_file, "rb"))
 
     calibration_bytes = pickle.dumps((K_l, R_l, t_l, K_r, R_r, t_r))
     calibration_size = len(calibration_bytes)
-    # client_socket.sendall(calibration_bytes)
 
-    # Send the videos captured from two webcams to the server
-    client_socket.sendall(
+    payload_bytes = (
         struct.pack("Q", w + w1)
         + struct.pack("Q", h)
         + struct.pack("Q", c)
         + struct.pack("Q", size)
         + struct.pack("Q", clientID)
-        + struct.pack("Q", calibration_size) 
+        + struct.pack("Q", calibration_size)
         + calibration_bytes
-    )  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-    
+    )
+
+    return payload_bytes
+
+
+def send_video(
+    host: str = "10.39.56.2",
+    port: int = 5000,
+    left_calibration_file: str = "left_camera.pickle",
+    right_calibration_file: str = "right_camera.pickle",
+):
+    # Start video capture using the two webcams
+    cap0 = cv2.VideoCapture(0)
+    cap1 = cv2.VideoCapture(1)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+
+    # Connect to server
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        client_socket.connect((host, port))
+    except socket.error as e:
+        print(f"Error connecting to {host}:{port}: {e}")
+
+    payload_bytes = prepare_initial_payload(cap0, cap1, left_calibration_file, right_calibration_file)
+    client_socket.sendall(payload_bytes)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+
     # client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID) + struct.pack("Q", calibration_size) + calibration_bytes) # UNCOMMENT THIS FOR DEBUGGING
 
     # send video

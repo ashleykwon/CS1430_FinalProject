@@ -5,6 +5,7 @@ import tyro
 import cv2
 from tqdm import tqdm
 import time
+import pickle
 
 
 def collect_images(N: int =10):
@@ -25,15 +26,15 @@ def main(
     fov_y: float = 52.2,
     W: int = 1920,
     H: int = 1080,
-    left_camera_output_file: str = 'left_camera.npy',
-    right_camera_output_file: str = 'right_camera.npy',
+    left_camera_output_file: str = 'left_camera.pickle',
+    right_camera_output_file: str = 'right_camera.pickle',
 ):
     chessboard_images = collect_images(N)
     K_l = get_intrinsic_matrix(fov_x=fov_x, fov_y=fov_y, W=W, H=H)
     K_r = get_intrinsic_matrix(fov_x=fov_x, fov_y=fov_y, W=W, H=H)
     R_l, t_l, R_r, t_r = stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_mm)
-    np.save(left_camera_output_file, (K_l, R_l, t_l))
-    np.save(right_camera_output_file, (K_r, R_r, t_r))
+    pickle.dump((K_l, R_l, t_l), open(left_camera_output_file, "wb"))
+    pickle.dump((K_r, R_r, t_r), open(right_camera_output_file, "wb"))
 
 if __name__ == '__main__':
     tyro.cli(main)
