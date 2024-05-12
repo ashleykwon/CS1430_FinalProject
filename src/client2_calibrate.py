@@ -9,6 +9,10 @@ import pickle
 
 
 def collect_images(N: int =10):
+    # if not os.path.exists("1"):
+    #     os.makedirs("1")
+    # if not os.path.exists("2"):
+    #     os.makedirs("2")
     cap1 = cv2.VideoCapture(0)
     cap2 = cv2.VideoCapture(1)
     chessboard_images = []
@@ -17,10 +21,12 @@ def collect_images(N: int =10):
         _, frame1 = cap1.read()
         _, frame2 = cap2.read()
         chessboard_images.append([frame1, frame2])
+        # cv2.imwrite("1/" + str(i) + ".jpg", frame1)
+        # cv2.imwrite("2/" + str(i) + ".jpg", frame2)
     return chessboard_images
 
 def main(
-    N: int = 10,
+    N: int = 20,
     chess_box_size_meters: float = 0.0235,
     fov_x: float = 82.1,
     fov_y: float = 52.2,

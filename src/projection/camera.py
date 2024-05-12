@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 def get_intrinsic_matrix(fov_x, fov_y, W, H):
     f_x = (W / 2) / np.tan(np.radians(fov_x / 2))
-    f_y = (W / 2) / np.tan(np.radians(fov_y / 2))
+    f_y = (H / 2) / np.tan(np.radians(fov_y / 2))
     s = 0.0
     c_x = W / 2
     c_y = H / 2
@@ -31,8 +31,10 @@ def stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_meters):
     imgpointsR = []  # 2d points in right image plane.
 
     for imgL, imgR in tqdm(chessboard_images):
-        retL, cornersL = cv2.findChessboardCorners(image=imgL, patternSize=(7, 10))
-        retR, cornersR = cv2.findChessboardCorners(image=imgR, patternSize=(7, 10))
+        outputL = imgL.copy()
+        outputR = imgR.copy()
+        retL, cornersL = cv2.findChessboardCorners(image=outputL, patternSize=(7, 10))
+        retR, cornersR = cv2.findChessboardCorners(image=outputR, patternSize=(7, 10))
 
         if retL and retR:
             objpoints.append(objp)
@@ -49,11 +51,11 @@ def stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_meters):
         objectPoints=objpoints,
         imagePoints=imgpointsL,
         imageSize=chessboard_images[0][0].shape[:2][::-1],
-        # cameraMatrix=None,
-        # distCoeffs=None,
-        cameraMatrix=K_l.copy(),
+        cameraMatrix=None,
         distCoeffs=None,
-        flags=(cv2.CALIB_FIX_FOCAL_LENGTH | cv2.CALIB_FIX_PRINCIPAL_POINT)
+        # cameraMatrix=K_l.copy(),
+        # distCoeffs=None,
+        # flags=(cv2.CALIB_FIX_FOCAL_LENGTH | cv2.CALIB_FIX_PRINCIPAL_POINT
     )[1:3]
 
     K_r_, distR = cv2.calibrateCamera(
@@ -93,7 +95,7 @@ def stereo_calibration(K_l, K_r, chessboard_images, chess_box_size_meters):
         distCoeffs1=distL,
         cameraMatrix2=K_r,
         distCoeffs2=distR,
-        imageSize=chessboard_images[0][0].shape[:2],
+        imageSize=chessboard_images[0][0].shape[:2][::-1],
         flags=cv2.CALIB_FIX_INTRINSIC,
         criteria=criteria_stereo,
     )
