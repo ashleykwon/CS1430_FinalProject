@@ -130,31 +130,18 @@ def client_thread_function(client_socket):
 
 
 def main():
-    # Create a server socket and bind it to the address/port
+    # Create a server socket and bind it to an address/port
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((HOST, PORT))
 
     # Listen for incoming connections
     server_socket.listen(5)
 
-    # Dictionary to store connected clients
-    clients = {}
-
-    # Counter for client IDs
-    client_id_counter = 1
-
     try:
         while True:
-            # Accept a connection
+            # Accept a connection (Should accept the connection from client 1 before client 2)
             client_socket, client_address = server_socket.accept()
             print(f"Got connection from {client_address}")
-
-            # Assign a unique ID to the client
-            client_id = client_id_counter
-            client_id_counter += 1
-
-            # Add the client to the dictionary
-            clients[client_id] = client_socket
 
             # Create a thread to handle the client
             client_thread = threading.Thread(
