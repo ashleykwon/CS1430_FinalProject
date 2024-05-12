@@ -27,6 +27,7 @@ def client_thread_function(client_socket):
     global dataFor3Dto2D  # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
     global calibration_size # calibration matrix size from client 2
     global calibrationMatrices # list with calibration matrices from client 2
+
     data = client_socket.recv(BUF_SIZE)
     payload_size = struct.calcsize("Q")
 
@@ -48,6 +49,7 @@ def client_thread_function(client_socket):
     # TODO:
     # if client 2
     if received_clientID == 2:
+        # print(data[:payload_size]) # this is empty for some reason??
         # Load calibration matrix size
         calibration_size = struct.unpack("Q", data[:payload_size])[0]
         data = data[payload_size:]
