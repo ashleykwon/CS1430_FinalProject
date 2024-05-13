@@ -66,7 +66,7 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
     # Use cv2.projectPoints to derive dataFor3Dto2D (3D points mapped to a 2D image)
     # remapped2DCoordsLeft = cv2.projectPoints(leftCameraTo3D, newRotationVec, newTranslationVec, K_l, dist_l) 
 
-    H, W = leftCameraTo3D.shape[:2]
+    H, W = leftCameraTo3D.shape[:2] # H = 480, W = 640
 
     # R_r = np.eye(3)
     # t_r = np.zeros((3,))
@@ -127,7 +127,7 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
     
     # exit()
 
-    return new_image
+    return new_image, H, W
 
 # import numpy as np
 # from PIL import Image

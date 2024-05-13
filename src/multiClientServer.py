@@ -1,6 +1,7 @@
 from _thread import *
 import socket
 import struct
+from time import sleep
 import cv2
 import numpy as np
 import threading
@@ -59,6 +60,8 @@ def client_thread_function(client_socket):
     received_clientID = struct.unpack("Q", data[:payload_size])[0]
     data = data[payload_size:]
 
+    # client_socket.setblocking(0)
+
     # TODO:
     # if client 2
     if received_clientID == 2:
@@ -78,7 +81,15 @@ def client_thread_function(client_socket):
         while True:
             # Receive data from client sockets
             while len(data) < msg_size:
-                data += client_socket.recv(BUF_SIZE)
+                try:
+                    data_from_client = client_socket.recv(BUF_SIZE)
+                    data += data_from_client
+                except socket.error as e:
+                    err = e.args[0]
+                    # print("No data")
+                    sleep(0.1)
+
+            # At this point, we have msg_size amount of data
             if received_clientID == 1:  # data for face detection received from client 1
                 faceCoordinate = data[:msg_size]
                 if faceCoordinate != b'':
@@ -87,8 +98,9 @@ def client_thread_function(client_socket):
                     print(faceCoordinate)
                 else:
                     faceCoordinate = [0.5,0.5] # if no face was detected, set faceCoordinate to the center of the client1 camera frame
-                # dataFor2Dto3D = b""
                 if dataFor3Dto2D != b"":
+                    # print(len(dataFor3Dto2D)) # 921600
+                    # send 
                     client_socket.sendall(dataFor3Dto2D)
                     print("reconstructed frame sent")
                 else:
@@ -118,14 +130,21 @@ def client_thread_function(client_socket):
                         new_y = faceCoordinate[1]
                         # print(new_x)
 
-                        reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
+                        reprojected_image, H, W = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
                         dataFor3Dto2D = reprojected_image.flatten().tobytes()
+                        print('updated reprojected bytes!')
                     else:
                         print("null face coordinate")
                         # print("reconstructed")
                     # reconstruction_ready = True
                 else:
                     print("no camera frames")
+            # if dataFor3Dto2D != b"":
+            #         client_socket.sendall(dataFor3Dto2D)
+            #         print("reconstructed frame sent")
+            # else:
+            #     print(dataFor3Dto2D)
+            # Flush out buffer at end of handling client
             data = data[msg_size:]
             
             
@@ -161,7 +180,6 @@ def main():
                 target=client_thread_function, args=(client_socket,)
             )
             client_thread.start()
-            # client_thread.join()
 
     except KeyboardInterrupt:
         print("Server shutting down.")
