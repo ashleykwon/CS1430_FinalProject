@@ -9,7 +9,7 @@ from scipy.spatial.transform import Slerp
 import pickle
 # from stitching import Stitcher
 
-zoe_depth = ZoeDepth(device=("cuda" if torch.cuda.is_available() else "cpu"))
+# zoe_depth = ZoeDepth(device=("cuda" if torch.cuda.is_available() else "cpu"))
 # stitcher = Stitcher(detector="brisk", confidence_threshold=0.2)
 
 def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y) -> Image.Image:
