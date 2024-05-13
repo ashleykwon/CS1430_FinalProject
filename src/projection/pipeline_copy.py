@@ -81,15 +81,26 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
     remapped2DCoordsLeft[:, :, 0] /= remapped2DCoordsLeft[:, :, 2]
     remapped2DCoordsLeft[:, :, 1] /= remapped2DCoordsLeft[:, :, 2]
 
+    remapped2DCoordsRight = intrinsic@extrinsic@leftCameraTo3D
+    remapped2DCoordsRight = remapped2DCoordsRight.reshape(3, W, H).T
+    remapped2DCoordsRight[:, :, 0] /= remapped2DCoordsRight[:,:,2] 
+    remapped2DCoordsRight[:, :, 1] /= remapped2DCoordsRight[:,:,2] 
+
     print(remapped2DCoordsLeft.shape)
 
     new_image = np.zeros((H, W, 3), dtype=np.uint8)
     for i in range(remapped2DCoordsLeft.shape[0]):
         for j in range(remapped2DCoordsLeft.shape[1]):
-            u = int(remapped2DCoordsLeft[i, j, 0])
-            v = int(remapped2DCoordsLeft[i, j, 1])
-            if 0 <= u < H and 0 <= v < W:
-                new_image[u, v] = leftCamFrameNP[i, j]
+            u_l = int(remapped2DCoordsLeft[i, j, 0])
+            v_l = int(remapped2DCoordsLeft[i, j, 1])
+
+            u_r = int(remapped2DCoordsRight[i, j, 0])
+            v_r = int(remapped2DCoordsRight[i, j, 1])
+
+            if 0 <= u_l < H and 0 <= v_l < W:
+                new_image[u_l, v_l] = leftCamFrameNP[i, j]
+            if 0 <= u_r < H and 0 <= v_r < W:
+                new_image[u_r, v_r] = rightCamFrameNP[i, j]
 
     cv2.imwrite('output.png', new_image)
     exit()
