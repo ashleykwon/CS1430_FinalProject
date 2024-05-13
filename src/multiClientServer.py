@@ -67,26 +67,19 @@ def client_thread_function(client_socket):
                 data += client_socket.recv(BUF_SIZE)
             if received_clientID == 1:  # data for face detection received from client 1
                 faceCoordinate = data[:msg_size]
-                if faceCoordinate:
-                    faceCoordinate = list(pickle.loads(faceCoordinate))
+                if faceCoordinate != b'':
+                    # print(pickle.loads(faceCoordinate))
+                    faceCoordinate = list(pickle.loads(data[:msg_size]))
                 else:
-                    faceCoordinate = [w//2, h//2] # if no face was detected, set faceCoordinate to the center of the client1 camera frame
+                    faceCoordinate = [0.5,0.5] # if no face was detected, set faceCoordinate to the center of the client1 camera frame
                 dataFor2Dto3D = b""
-            elif (
-                received_clientID == 2
-            ):  # data for 2D to 3D reconstruction received from client 2
+                dataFor3Dto2D = b""
+            elif received_clientID == 2:  # data for 2D to 3D reconstruction received from client 2
                 dataFor2Dto3D = data[:msg_size]
+                faceCoordinate = [0.5,0.5]
+                dataFor3Dto2D = b""
             data = data[msg_size:]
             
-
-            # Visualize received frame for debugging porposes only
-            # frame = np.frombuffer(dataForFD, dtype=np.uint8)
-            # frame = frame.reshape(w, h, c)
-            # cv2.imshow('Received', frame)
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
-
-
             if dataFor2Dto3D != b"":
                 joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8).reshape(w_2, h, c)
                 w = w_2 // 2
@@ -105,14 +98,15 @@ def client_thread_function(client_socket):
                 new_y = faceCoordinate[1]
 
                 reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
+                dataFor3Dto2D = reprojected_image.flatten().tobytes()
+                # print("reprojection calculated")
+                # cv2.imwrite("reconstructed.png", reprojected_image)
                 # reprojected_image = cv2.cvtColor(reprojected_image, cv2.COLOR_RGB2BGR)
 
-                # TODO: send reprojected image back
-
-                # Send the 3D to 2D mapping result back to client 1
-                if received_clientID == 1:  # from client 1
-                    dataFor3Dto2D = reprojected_image.flatten().tobytes()
-                    client_socket.sendall(dataFor3Dto2D)
+            # Send the 3D to 2D mapping result back to client 1
+            if received_clientID == 1:  # from client 1   
+                client_socket.sendall(dataFor3Dto2D)
+                print("reconstructed frame sent")
 
     finally:
         client_socket.close()

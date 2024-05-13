@@ -6,10 +6,9 @@ import tyro
 import pickle
 
 
-def prepare_initial_payload(cap0, cap1, left_calibration_file, right_calibration_file):
+def prepare_initial_payload(frame, frame1, left_calibration_file, right_calibration_file):
     # get frame size and generate client ID
-    ret, frame = cap0.read()
-    ret1, frame1 = cap1.read()  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+     # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
     w, h, c = frame.shape
     w1, h1, c1 = frame1.shape  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
     data = frame.flatten().tobytes()  # frame from camera 1
@@ -42,12 +41,15 @@ def prepare_initial_payload(cap0, cap1, left_calibration_file, right_calibration
 def send_video(
     host: str = "10.39.56.2",
     port: int = 5000,
-    left_calibration_file: str = "left_camera.pickle",
-    right_calibration_file: str = "right_camera.pickle",
+    left_calibration_file: str = "test_data/left_camera.pickle",
+    right_calibration_file: str = "test_data/right_camera.pickle",
 ):
     # Start video capture using the two webcams
     cap0 = cv2.VideoCapture(0)
     cap1 = cv2.VideoCapture(1)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+
+    ret, frame = cap0.read()
+    ret1, frame1 = cap1.read() 
 
     # Connect to server
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,7 +58,7 @@ def send_video(
     except socket.error as e:
         print(f"Error connecting to {host}:{port}: {e}")
 
-    payload_bytes = prepare_initial_payload(cap0, cap1, left_calibration_file, right_calibration_file)
+    payload_bytes = prepare_initial_payload(frame, frame1, left_calibration_file, right_calibration_file)
     client_socket.sendall(payload_bytes)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
 
     # client_socket.sendall(struct.pack("Q", w) + struct.pack("Q", h) + struct.pack("Q", c) + struct.pack("Q", size) + struct.pack("Q", clientID) + struct.pack("Q", calibration_size) + calibration_bytes) # UNCOMMENT THIS FOR DEBUGGING
