@@ -7,10 +7,8 @@ from zoe_depth import ZoeDepth
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp 
 import pickle
-from stitching import Stitcher
 
 zoe_depth = ZoeDepth(device=("cuda" if torch.cuda.is_available() else "cpu"))
-stitcher = Stitcher(detector="brisk", confidence_threshold=0.2)
 
 def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y) -> Image.Image:
     # Assume K_l and K_r are the same
@@ -60,14 +58,7 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
     newTranslationVec = np.multiply(np.asarray([new_x, new_y, 1]), t_r)
     newTranslationVec = np.asarray([[newTranslationVec[0]], [newTranslationVec[1]], [newTranslationVec[2]]])
 
-    # Use cv2.projectPoints to derive dataFor3Dto2D (3D points mapped to a 2D image)
-    # remapped2DCoordsLeft = cv2.projectPoints(leftCameraTo3D, newRotationVec, newTranslationVec, K_l, dist_l) 
-
     H, W = leftCameraTo3D.shape[:2]
-
-    # R_r = np.eye(3)
-    # t_r = np.zeros((3,))
-    # t_r[0] += 1.0
 
     leftCameraTo3D = np.concatenate((
             leftCameraTo3D,
@@ -85,22 +76,16 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
 
     intrinsic = K_r
     extrinsic = np.hstack((newRotationMatrix, newTranslationVec))
-    # extrinsic = np.hstack((R_r, t_r[:, None]))
     remapped2DCoordsLeft = intrinsic @ extrinsic @ leftCameraTo3D
-    # remapped2DCoordsLeft = remapped2DCoordsLeft.reshape(3, W, H).T
     remapped2DCoordsLeft[0, :] /= remapped2DCoordsLeft[2, :]
     remapped2DCoordsLeft[1, :] /= remapped2DCoordsLeft[2, :]
 
     remapped2DCoordsRight = intrinsic@extrinsic@rightCameraTo3D # 3 by N
-    # remapped2DCoordsRight = remapped2DCoordsRight.reshape(3, W, H).T
     remapped2DCoordsRight[0, :] /= remapped2DCoordsRight[2, :] 
     remapped2DCoordsRight[1, :] /= remapped2DCoordsRight[2, :] 
 
-    # print(remapped2DCoordsLeft.shape)
+    new_image = np.zeros((H, W, 3), dtype=np.uint8)
 
-    new_image_left = np.zeros((H, W, 3), dtype=np.uint8)
-    new_image_right = np.zeros((H, W, 3), dtype=np.uint8)
-    # print(new_image.shape)
     for i in range(remapped2DCoordsLeft.shape[1]):
         leftUV = remapped2DCoordsLeft[:,i]
         rightUV = remapped2DCoordsRight[:,i]
@@ -111,25 +96,12 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
         v_r = int(rightUV[0])
 
         if 0 <= u_l < H and 0 <= v_l < W:
-            new_image_left[u_l, v_l] = leftCamFrameNP[u_l, v_l,:]
+            new_image[u_l, v_l] = leftCamFrameNP[u_l, v_l,:]
         if 0 <= u_r < H and 0 <= v_r < W:
-            new_image_right[u_r, v_r] = rightCamFrameNP[u_r, v_r,:]
-    stitched = stitcher.stitch([new_image_right, new_image_left])
-    # if dummy != cv2.STITCHER_OK:
-    #     print("Can't stitch :/")
-    # else:
-    cv2.imwrite('stitched.png', stitched)
-    cv2.imwrite('output_left.png', new_image_left)
-    cv2.imwrite('output_right.png', new_image_right)
-    
-    exit()
+            new_image[u_r, v_r] = rightCamFrameNP[u_r, v_r,:]
 
+    new_image = cv2.cvtColor(new_image, cv2.COLOR_RGB2BGR)
     return new_image
-
-
-def map_points_to_colors():
-    # remapped2DCoordsLeft:
-    pass
 
 
 if __name__ == "__main__":
@@ -140,4 +112,8 @@ if __name__ == "__main__":
 
     leftCameraFrame = Image.open("test_data/left.jpg")
     rightCameraFrame = Image.open("test_data/right.jpg")
-    reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, 0.3, 0.5)
+
+    for i in range(11):
+        new_x = i / 10
+        new_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, 0.5)
+        cv2.imwrite(f'outputs/{i}.jpg', new_image)
