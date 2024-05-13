@@ -50,31 +50,69 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
 
     # Derive a new extrinsic matrix for the third camera (user's head) with new_x and new_y
     # newRotationVec = new_x*cv2.Rodrigues(R_l) # check this 
-    R_l = R.from_matrix(R_l).as_quat() # Change this to a Rotation instance
-    R_r = R.from_matrix(R_r).as_quat() # Change this to a Rotation instance
-    slerp = Slerp([0,1], [R_r, R_l])
-    newRotationVec = slerp([new_x])[0]
-    newRotationVec = cv2.Rodrigues(newRotationVec.as_matrix())
+    # R_l = R.from_matrix(R_l).as_quat() # Change this to a Rotation instance
+    # R_r = R.from_matrix(R_r).as_quat() # Change this to a Rotation instance
+    # slerp = Slerp([0,1], [R_r, R_l])
+    # newRotationVec = slerp([new_x])[0]
+    # newRotationVec = cv2.Rodrigues(newRotationVec.as_matrix())
 
-    newTranslationVec = np.multiply(np.asarray([new_x, new_y, 1]), t_l) 
+    # newRotationVec = R.from_matrix(R_r).as_rotvec()
+    # newTranslationVec = t_r 
 
     # Use cv2.projectPoints to derive dataFor3Dto2D (3D points mapped to a 2D image)
-    remapped2DCoordsLeft = cv2.projectPoints(leftCameraTo3D, newRotationVec, newTranslationVec, K_l, dist_l) 
-    remapped2DCoordsLeft[remapped2DCoordsLeft < 0] = -1
-    remapped2DCoordsRight = cv2.projectPoints(rightCameraTo3D, newRotationVec, newTranslationVec, K_l, dist_r) 
-    remapped2DCoordsRight[remapped2DCoordsRight < 0] = -1
+    # remapped2DCoordsLeft = cv2.projectPoints(leftCameraTo3D, newRotationVec, newTranslationVec, K_l, dist_l) 
 
-    for i in range(remapped2DCoordsLeft.shape[0]): # Change this so that it doesn't use for loop
-        coordLeft = remapped2DCoordsLeft[i]
-        colorLeft = leftCamFrameFlat[i]
-        dataFor3Dto2D[coordLeft[0], coordLeft[1], :] = colorLeft
+    H, W = leftCameraTo3D.shape[:2]
+
+    R_r = np.eye(3)
+    t_r = np.zeros((3,))
+    t_r[0] += 1.0
+
+    leftCameraTo3D = np.concatenate((
+            leftCameraTo3D,
+            np.ones(leftCameraTo3D.shape[:2] + (1,))
+        ),
+        axis=2
+    ).T.reshape(4, -1)
+    intrinsic = K_r
+    extrinsic = np.hstack((R_r, t_r[:, None]))
+    remapped2DCoordsLeft = intrinsic @ extrinsic @ leftCameraTo3D
+    remapped2DCoordsLeft = remapped2DCoordsLeft.reshape(3, W, H).T
+    remapped2DCoordsLeft[:, :, 0] /= remapped2DCoordsLeft[:, :, 2]
+    remapped2DCoordsLeft[:, :, 1] /= remapped2DCoordsLeft[:, :, 2]
+
+    print(remapped2DCoordsLeft.shape)
+
+    new_image = np.zeros((H, W, 3), dtype=np.uint8)
+    for i in range(remapped2DCoordsLeft.shape[0]):
+        for j in range(remapped2DCoordsLeft.shape[1]):
+            u = int(remapped2DCoordsLeft[i, j, 0])
+            v = int(remapped2DCoordsLeft[i, j, 1])
+            if 0 <= u < H and 0 <= v < W:
+                new_image[u, v] = leftCamFrameNP[i, j]
+
+    cv2.imwrite('output.png', new_image)
+    exit()
+
+    # remapped2DCoordsLeft[remapped2DCoordsLeft < 0] = -1
+    # remapped2DCoordsRight = cv2.projectPoints(rightCameraTo3D, newRotationVec, newTranslationVec, K_l, dist_r) 
+    # remapped2DCoordsRight[remapped2DCoordsRight < 0] = -1
+
+    # for i in range(remapped2DCoordsLeft.shape[0]): # Change this so that it doesn't use for loop
+    #     coordLeft = remapped2DCoordsLeft[i]
+    #     colorLeft = leftCamFrameFlat[i]
+    #     dataFor3Dto2D[coordLeft[0], coordLeft[1], :] = colorLeft
         
-        coordRight = remapped2DCoordsRight[i]
-        colorRight = rightCamFrameFlat[i]
-        dataFor3Dto2D[coordRight[0], coordRight[1], :] = colorRight
+    #     coordRight = remapped2DCoordsRight[i]
+    #     colorRight = rightCamFrameFlat[i]
+    #     dataFor3Dto2D[coordRight[0], coordRight[1], :] = colorRight
 
     return dataFor3Dto2D
 
+
+def map_points_to_colors():
+    # remapped2DCoordsLeft:
+    pass
 
 
 if __name__ == "__main__":
@@ -84,11 +122,11 @@ if __name__ == "__main__":
     # K_r = np.asarray([[1, 0, 0], [0, 1, 0], [0, 0, 0]])
     # R_r = np.eye(3) 
     # t_r = np.zeros(3)
-    K_l, R_l, t_l, dist_l = pickle.load(open("/Users/ashleykwon/Desktop/CS1430_FinalProject/src/projection/test3Dto2D/left_camera.pickle", 'rb'))
-    t_l = np.asarray([t_l[0][0], t_l[1][0], t_l[2][0]])
-    K_r, R_r, t_r, dist_r = pickle.load(open("/Users/ashleykwon/Desktop/CS1430_FinalProject/src/projection/test3Dto2D/right_camera.pickle", 'rb'))
-    leftCameraFrame = Image.open("/Users/ashleykwon/Desktop/CS1430_FinalProject/src/projection/test3Dto2D/left.jpg")
-    # leftCameraFrame = np.asarray(leftCameraFrame)
-    rightCameraFrame = Image.open("/Users/ashleykwon/Desktop/CS1430_FinalProject/src/projection/test3Dto2D/right.jpg")
-    # rightCameraFrame = np.asarray(rightCameraFrame)
+    K_l, dist_l, R_l, t_l = pickle.load(open("test_data/left_camera.pickle", 'rb'))
+    K_r, dist_r, R_r, t_r = pickle.load(open("test_data/right_camera.pickle", 'rb'))
+
+    t_r = t_r[:, 0]
+
+    leftCameraFrame = Image.open("test_data/left.jpg")
+    rightCameraFrame = Image.open("test_data/right.jpg")
     reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, 0.5, 0.5)
