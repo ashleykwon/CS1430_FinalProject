@@ -9,14 +9,14 @@ import pickle
 def prepare_initial_payload(frame, frame1, left_calibration_file, right_calibration_file):
     # get frame size and generate client ID
      # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-    w, h, c = frame.shape
-    w1, h1, c1 = frame1.shape  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-    data = frame.flatten().tobytes()  # frame from camera 1
-    data2 = (
-        frame1.flatten().tobytes()
-    )  # frame from camera 2 # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-    size = len(data) + len(data2)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-    # size = len(data) # UNCOMMENT THIS FOR DEBUGGING
+    h, w, c = frame.shape
+    h1, w1, c1 = frame1.shape  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+    # data = frame.flatten().tobytes()  # frame from camera 1
+    data = pickle.dumps(np.hstack((frame, frame1)))
+    # data2 = (
+    #     frame1.flatten().tobytes()
+    # )  # frame from camera 2 # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+    size = len(data)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
     clientID = 2
 
     K_l, dist_l, R_l, t_l = pickle.load(open(left_calibration_file, "rb"))
@@ -73,9 +73,10 @@ def send_video(
             joined_frame = np.hstack(
                 (frame, frame1)
             )  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
-            joined_frame_data = (
-                joined_frame.flatten().tobytes()
-            )  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+
+            # cv2.imwrite("joined frame.jpg", joined_frame) # This is fine
+            joined_frame_data = pickle.dumps(joined_frame)  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA
+            # print("joined frame shape in client 2" + str(joined_frame.shape))
             client_socket.sendall(
                 joined_frame_data
             )  # COMMENT THIS OUT WHEN ONLY USING ONE CAMERA

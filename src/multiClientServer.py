@@ -16,7 +16,7 @@ import pickle
 #   https://stackoverflow.com/questions/10810249/python-socket-multiple-clients
 #   https://realpython.com/intro-to-python-threading/
  
-BUF_SIZE = 1280 * 720 * 2
+BUF_SIZE = 1280 * 720 * 10
 HOST = "10.39.56.2"
 PORT = 5000
 RECONSTRUCTION_READY = False
@@ -95,16 +95,16 @@ def client_thread_function(client_socket):
                 if faceCoordinate != b'':
                     # print(pickle.loads(faceCoordinate))
                     faceCoordinate = list(pickle.loads(data[:msg_size]))
-                    print(faceCoordinate)
+                    # print(faceCoordinate)
                 else:
                     faceCoordinate = [0.5,0.5] # if no face was detected, set faceCoordinate to the center of the client1 camera frame
                 if dataFor3Dto2D != b"":
                     # print(len(dataFor3Dto2D)) # 921600
                     # send 
                     client_socket.sendall(dataFor3Dto2D)
-                    print("reconstructed frame sent")
-                else:
-                    print(dataFor3Dto2D)
+                    # print("reconstructed frame sent")
+                # else:
+                #     print(dataFor3Dto2D)
             
             elif received_clientID == 2:  # data for 2D to 3D reconstruction received from client 2
                 # print("client 2 running")
@@ -112,27 +112,35 @@ def client_thread_function(client_socket):
                 # faceCoordinate = [0.5,0.5]
                 # dataFor3Dto2D = b""
                 if dataFor2Dto3D != b"":
-                    joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8).reshape(w_2, h, c)
+                    joined_frames = pickle.loads(dataFor2Dto3D)
+                    # joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8).reshape(w_2, h, c)
                     w = w_2 // 2
 
-                    leftCameraFrame = Image.fromarray(
-                        cv2.cvtColor(joined_frames[:w, :, :], cv2.COLOR_BGR2RGB)
-                    )
+                    # print("joined frames shape in server" + str(joined_frames.shape))
+                    # print(type(joined_frames))
+                    # print("left frame shape in server " + str(joined_frames[:, :w, :].shape))
+                    # print("right frame shape in server " + str(joined_frames[:, w:, :].shape))
 
-                    rightCameraFrame = Image.fromarray(
-                        cv2.cvtColor(joined_frames[w:, :, :], cv2.COLOR_BGR2RGB)
+                    leftCameraFrame = Image.fromarray(
+                        cv2.cvtColor(joined_frames[:, :w, :], cv2.COLOR_BGR2RGB)
                     )
+                    # leftCameraFrame.save("leftCameraFrame.jpg")
+                   
+                    rightCameraFrame = Image.fromarray(
+                        cv2.cvtColor(joined_frames[:, w:, :], cv2.COLOR_BGR2RGB)
+                    )
+                    # rightCameraFrame.save("rightCameraFrame.jpg")
 
                     K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r = calibrationMatrices
 
                     if len(faceCoordinate) != 0:
                         new_x = faceCoordinate[0]
                         new_y = faceCoordinate[1]
-                        # print(new_x)
 
-                        reprojected_image, H, W = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
+                        reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
+                        cv2.imwrite("reprojected.jpg", reprojected_image)
                         dataFor3Dto2D = reprojected_image.flatten().tobytes()
-                        print('updated reprojected bytes!')
+                        # print('updated reprojected bytes!')
                     else:
                         print("null face coordinate")
                         # print("reconstructed")
