@@ -18,8 +18,11 @@ def interpolate_extrinsic_matrices(R_l, t_l, R_r, t_r, new_x, new_y):
     rots = R.from_euler('xyz', rots, degrees=True)
     slerp = Slerp([0,1], rots)
     newRotationMatrix = slerp([new_x])[0].as_matrix()
-    newTranslationVec = np.multiply(np.asarray([new_x, new_y, 1]), t_r)
-    newTranslationVec = np.asarray([[newTranslationVec[0]], [newTranslationVec[1]], [newTranslationVec[2]]])
+
+    newTranslationVec = t_r
+    newTranslationVec[0] *= new_x
+    newTranslationVec = newTranslationVec[:, None]
+
     return np.hstack((newRotationMatrix, newTranslationVec))
 
 def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y) -> Image.Image:
@@ -59,66 +62,57 @@ def reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R
         axis=2
     ).reshape(H * W, 4).T
 
+    # intrinsic = K_l
+    # extrinsic = interpolate_extrinsic_matrices(R_l, t_l, R_r, t_r, new_x, new_y)
+
     intrinsic = K_l
-    extrinsic = interpolate_extrinsic_matrices(R_l, t_l, R_r, t_r, new_x, new_y)
+    # t_l[0] += 1.0
+    extrinsic = np.hstack((R_l, t_l[:, None]))
+
+    new_image = np.zeros((H * W, 3), dtype=np.uint8)
+
+    ## Left image reprojection
 
     remapped2DCoordsLeft = intrinsic @ extrinsic @ leftCameraTo3D
     remapped2DCoordsLeft[0, :] /= remapped2DCoordsLeft[2, :]
     remapped2DCoordsLeft[1, :] /= remapped2DCoordsLeft[2, :]
     remapped2DCoordsLeft = remapped2DCoordsLeft[:2, :].astype(int)
+    remapped2DCoordsLeft = remapped2DCoordsLeft[::-1, :]
 
-    remapped2DCoordsRight = intrinsic@extrinsic@rightCameraTo3D # 3 x N
+    left_valid_mappings = (
+        ((remapped2DCoordsLeft[0, :] >= 0) & (remapped2DCoordsLeft[0, :] < H)) &
+        ((remapped2DCoordsLeft[1, :] >= 0) & (remapped2DCoordsLeft[1, :] < W))
+    )
+
+    leftCameraFrame = leftCameraFrame.reshape(H*W, 3)
+    remapped2DCoordsLeft = np.ravel_multi_index(remapped2DCoordsLeft, (H, W), mode='clip')
+    new_image[left_valid_mappings] = leftCameraFrame[remapped2DCoordsLeft[left_valid_mappings]]
+
+    ## Right image reprojection
+
+    remapped2DCoordsRight = intrinsic @ extrinsic @ rightCameraTo3D # 3 x N
     remapped2DCoordsRight[0, :] /= remapped2DCoordsRight[2, :] 
     remapped2DCoordsRight[1, :] /= remapped2DCoordsRight[2, :] 
     remapped2DCoordsRight = remapped2DCoordsRight[:2, :].astype(int)  # 2 x N
 
-    ###
+    remapped2DCoordsRight = remapped2DCoordsRight[::-1, :]
 
-    # remapped2DCoordsLeft = remapped2DCoordsLeft[::-1, :]
-    # remapped2DCoordsRight = remapped2DCoordsRight[::-1, :]
+    right_valid_mappings = (
+        ((remapped2DCoordsRight[0, :] >= 0) & (remapped2DCoordsRight[0, :] < H)) &
+        ((remapped2DCoordsRight[1, :] >= 0) & (remapped2DCoordsRight[1, :] < W))
+    )
 
-    # valid_mappings = (
-    #     ((remapped2DCoordsLeft[0, :] >= 0) & (remapped2DCoordsLeft[0, :] < H)) &
-    #     ((remapped2DCoordsLeft[1, :] >= 0) & (remapped2DCoordsLeft[1, :] < W))
-    # )
+    rightCameraFrame = rightCameraFrame.reshape(H*W, 3)
+    remapped2DCoordsRight = np.ravel_multi_index(remapped2DCoordsRight, (H, W), mode='clip')
+    new_image[right_valid_mappings] = rightCameraFrame[remapped2DCoordsRight[right_valid_mappings]]
 
-    # leftCameraFrame = leftCameraFrame.reshape(H*W, 3)
-    # remapped2DCoordsLeft = np.ravel_multi_index(remapped2DCoordsLeft, (H, W), mode='clip')
+    ## Post-processing
 
-    # new_image = np.zeros((H * W, 3), dtype=np.uint8)
-    # new_image[valid_mappings] = leftCameraFrame[remapped2DCoordsLeft[valid_mappings]]
-
-    # valid_mappings = (
-    #     ((remapped2DCoordsRight[0, :] >= 0) & (remapped2DCoordsRight[0, :] < H)) &
-    #     ((remapped2DCoordsRight[1, :] >= 0) & (remapped2DCoordsRight[1, :] < W))
-    # )
-
-    # rightCameraFrame = rightCameraFrame.reshape(H*W, 3)
-    # remapped2DCoordsRight = np.ravel_multi_index(remapped2DCoordsRight, (H, W), mode='clip')
-
-    # new_image[valid_mappings] = rightCameraFrame[remapped2DCoordsRight[valid_mappings]]
-    # new_image = new_image.reshape(H, W, 3)
-
-    ## working
-
-    new_image = np.zeros((H, W, 3), dtype=np.uint8)
-
-    for i in range(remapped2DCoordsLeft.shape[1]):
-        leftUV = remapped2DCoordsLeft[:,i]
-        rightUV = remapped2DCoordsRight[:,i]
-
-        u_l = int(leftUV[1])
-        v_l = int(leftUV[0])
-
-        u_r = int(rightUV[1])
-        v_r = int(rightUV[0])
-
-        if 0 <= u_l < H and 0 <= v_l < W:
-            new_image[u_l, v_l] = leftCameraFrame[u_l, v_l,:]
-        if 0 <= u_r < H and 0 <= v_r < W:
-            new_image[u_r, v_r] = rightCameraFrame[u_r, v_r,:]
-
+    new_image = new_image.reshape(H, W, 3)
     new_image = cv2.cvtColor(new_image, cv2.COLOR_RGB2BGR)
+
+    new_image = np.flip(new_image, axis=0)
+    new_image = np.flip(new_image, axis=1)
 
     return new_image
 
@@ -127,7 +121,11 @@ if __name__ == "__main__":
     K_l, dist_l, R_l, t_l = pickle.load(open("test_data/left_camera.pickle", 'rb'))
     K_r, dist_r, R_r, t_r = pickle.load(open("test_data/right_camera.pickle", 'rb'))
 
-    t_r = t_r[:, 0]
+    # print(interpolate_extrinsic_matrices(R_l, t_l, R_r, t_r, 0.5, None))
+    # exit()
+
+    t_l = -1 * t_l
+    t_r = -1 * t_r[:, 0]
 
     leftCameraFrame = Image.open("test_data/left.jpg")
     rightCameraFrame = Image.open("test_data/right.jpg")
