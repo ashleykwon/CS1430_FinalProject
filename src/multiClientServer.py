@@ -1,6 +1,7 @@
 from _thread import *
 import socket
 import struct
+from time import sleep
 import cv2
 import numpy as np
 import threading
@@ -18,8 +19,21 @@ import pickle
 BUF_SIZE = 1280 * 720 * 2
 HOST = "10.39.56.2"
 PORT = 5000
+RECONSTRUCTION_READY = False
 
 zoe_depth = ZoeDepth(device=("cuda" if torch.cuda.is_available() else "cpu"))
+
+# global faceCoordinate  # video frame from 1 camera from client 1 for face detection
+# global dataFor2Dto3D  # video frames from 2 cameras from client 2 for 3D reconstruction
+# global dataFor3Dto2D  # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
+# global calibration_size # calibration matrix size from client 2
+# global calibrationMatrices # list with calibration matrices from client 2
+
+faceCoordinate  = []# video frame from 1 camera from client 1 for face detection
+dataFor2Dto3D = b"" # video frames from 2 cameras from client 2 for 3D reconstruction
+dataFor3Dto2D = b"" # video frame where the 3D reconstruction result is turned into 2D to be sent back to client 1
+calibration_size = 0 # calibration matrix size from client 2
+calibrationMatrices = [] # list with calibration matrices from client 2
 
 def client_thread_function(client_socket):
     global faceCoordinate  # video frame from 1 camera from client 1 for face detection
@@ -46,6 +60,8 @@ def client_thread_function(client_socket):
     received_clientID = struct.unpack("Q", data[:payload_size])[0]
     data = data[payload_size:]
 
+    # client_socket.setblocking(0)
+
     # TODO:
     # if client 2
     if received_clientID == 2:
@@ -56,6 +72,7 @@ def client_thread_function(client_socket):
         # Load calibration matrices
         calibrationMatrices = pickle.loads(data[:calibration_size])
         data = data[calibration_size:]
+        # dataFor3Dto2D = b''
     else:
         calibration_size = 0
         calibrationMatrices = []
@@ -64,55 +81,81 @@ def client_thread_function(client_socket):
         while True:
             # Receive data from client sockets
             while len(data) < msg_size:
-                data += client_socket.recv(BUF_SIZE)
+                try:
+                    data_from_client = client_socket.recv(BUF_SIZE)
+                    data += data_from_client
+                except socket.error as e:
+                    err = e.args[0]
+                    # print("No data")
+                    sleep(0.1)
+
+            # At this point, we have msg_size amount of data
             if received_clientID == 1:  # data for face detection received from client 1
                 faceCoordinate = data[:msg_size]
-                if faceCoordinate:
-                    faceCoordinate = list(pickle.loads(faceCoordinate))
+                if faceCoordinate != b'':
+                    # print(pickle.loads(faceCoordinate))
+                    faceCoordinate = list(pickle.loads(data[:msg_size]))
+                    print(faceCoordinate)
                 else:
-                    faceCoordinate = [w//2, h//2] # if no face was detected, set faceCoordinate to the center of the client1 camera frame
-                dataFor2Dto3D = b""
-            elif (
-                received_clientID == 2
-            ):  # data for 2D to 3D reconstruction received from client 2
+                    faceCoordinate = [0.5,0.5] # if no face was detected, set faceCoordinate to the center of the client1 camera frame
+                if dataFor3Dto2D != b"":
+                    # print(len(dataFor3Dto2D)) # 921600
+                    # send 
+                    client_socket.sendall(dataFor3Dto2D)
+                    print("reconstructed frame sent")
+                else:
+                    print(dataFor3Dto2D)
+            
+            elif received_clientID == 2:  # data for 2D to 3D reconstruction received from client 2
+                # print("client 2 running")
                 dataFor2Dto3D = data[:msg_size]
+                # faceCoordinate = [0.5,0.5]
+                # dataFor3Dto2D = b""
+                if dataFor2Dto3D != b"":
+                    joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8).reshape(w_2, h, c)
+                    w = w_2 // 2
+
+                    leftCameraFrame = Image.fromarray(
+                        cv2.cvtColor(joined_frames[:w, :, :], cv2.COLOR_BGR2RGB)
+                    )
+
+                    rightCameraFrame = Image.fromarray(
+                        cv2.cvtColor(joined_frames[w:, :, :], cv2.COLOR_BGR2RGB)
+                    )
+
+                    K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r = calibrationMatrices
+
+                    if len(faceCoordinate) != 0:
+                        new_x = faceCoordinate[0]
+                        new_y = faceCoordinate[1]
+                        # print(new_x)
+
+                        reprojected_image, H, W = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
+                        dataFor3Dto2D = reprojected_image.flatten().tobytes()
+                        print('updated reprojected bytes!')
+                    else:
+                        print("null face coordinate")
+                        # print("reconstructed")
+                    # reconstruction_ready = True
+                else:
+                    print("no camera frames")
+            # if dataFor3Dto2D != b"":
+            #         client_socket.sendall(dataFor3Dto2D)
+            #         print("reconstructed frame sent")
+            # else:
+            #     print(dataFor3Dto2D)
+            # Flush out buffer at end of handling client
             data = data[msg_size:]
             
-
-            # Visualize received frame for debugging porposes only
-            # frame = np.frombuffer(dataForFD, dtype=np.uint8)
-            # frame = frame.reshape(w, h, c)
-            # cv2.imshow('Received', frame)
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
-
-
-            if dataFor2Dto3D != b"":
-                joined_frames = np.frombuffer(dataFor2Dto3D, dtype=np.uint8).reshape(w_2, h, c)
-                w = w_2 // 2
-
-                leftCameraFrame = Image.fromarray(
-                    cv2.cvtColor(joined_frames[:w, :, :], cv2.COLOR_BGR2RGB)
-                )
-
-                rightCameraFrame = Image.fromarray(
-                    cv2.cvtColor(joined_frames[w:, :, :], cv2.COLOR_BGR2RGB)
-                )
-
-                K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r = calibrationMatrices
-
-                new_x = faceCoordinate[0]
-                new_y = faceCoordinate[1]
-
-                reprojected_image = reprojectImages(leftCameraFrame, rightCameraFrame, zoe_depth, K_l, dist_l, R_l, t_l, K_r, dist_r, R_r, t_r, new_x, new_y)
+            
+                # print("reprojection calculated")
+                # cv2.imwrite("reconstructed.png", reprojected_image)
                 # reprojected_image = cv2.cvtColor(reprojected_image, cv2.COLOR_RGB2BGR)
 
-                # TODO: send reprojected image back
-
-                # Send the 3D to 2D mapping result back to client 1
-                if received_clientID == 1:  # from client 1
-                    dataFor3Dto2D = reprojected_image.flatten().tobytes()
-                    client_socket.sendall(dataFor3Dto2D)
+            # Send the 3D to 2D mapping result back to client 1
+            # if received_clientID == 1:  # from client 1   
+            #     client_socket.sendall(dataFor3Dto2D)
+            #     print("reconstructed frame sent")
 
     finally:
         client_socket.close()

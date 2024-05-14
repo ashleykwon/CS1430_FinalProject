@@ -1,3 +1,4 @@
+from time import sleep
 import cv2
 import socket
 import struct
@@ -41,6 +42,9 @@ def send_and_receive_video():
     w, h, c = frame.shape
     data = frame.flatten().tobytes()
     frameSize = len(data)
+    frameSize = 921600
+    w = 640
+    h = 480
 
     faceCoordinates = detect_face(frame)
     face_bytes = pickle.dumps(faceCoordinates)
@@ -55,6 +59,7 @@ def send_and_receive_video():
         + struct.pack("Q", size)
         + struct.pack("Q", clientID)
     )
+    client_socket.setblocking(0)
 
     received_data = b""
 
@@ -74,20 +79,52 @@ def send_and_receive_video():
 
             ##### COMMENT THE PART BELOW BACK IN WHEN RECONSTRUCTIONS ARE IMPLEMENTED###
             # Receive video from the server through socket
-            while len(received_data) < frameSize:
-                print('data received')
-                received_data += client_socket.recv(BUF_SIZE)
-            rec_image_bytes = received_data[:frameSize]
-            received_data = received_data[frameSize:]
+            try:
+                received_data = client_socket.recv(BUF_SIZE)
+                if received_data != b"":
+                    i = 0
+                    print('data received' + str(i))
+                    while len(received_data) < frameSize:
+                        # print(frameSize)
+                        # print(len(received_data))
+                        try:
+                            received_data += client_socket.recv(BUF_SIZE)
+                            i += 1
+                            print('more data' + str(i))
+                        except socket.error as f:
+                            ferr = f.args[0]
+                            print('no data lol')
+                            sleep(0.1)
+                    print('reached frame length')
+                    rec_image_bytes = received_data[:frameSize]
+                    received_data = received_data[frameSize:]
 
-            # Read received_data in the same format sent by multiClientServer and display it as a video
-            if rec_image_bytes:
-                rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8)
-                rec_image = rec_image.reshape(w, h, c)
-                cv2.imshow('Received', rec_image)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-            ##### COMMENT THE PART ABOVE BACK IN WHEN RECONSTRUCTIONS ARE IMPLEMENTED###
+                    # Read received_data in the same format sent by multiClientServer and display it as a video
+                    if rec_image_bytes:
+                        print('lets try to show image')
+                        rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8)
+                        rec_image = rec_image.reshape(w, h, c)
+                        cv2.imshow('Received', rec_image)
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            break
+            except socket.error as e:
+                err = e.args[0]
+                sleep(0.1)
+            # if received_data != b"":
+            #     while len(received_data) < frameSize:
+            #         print('data received')
+            #         received_data += client_socket.recv(BUF_SIZE)
+            #     rec_image_bytes = received_data[:frameSize]
+            #     received_data = received_data[frameSize:]
+
+            #     # Read received_data in the same format sent by multiClientServer and display it as a video
+            #     if rec_image_bytes:
+            #         rec_image = np.frombuffer(rec_image_bytes, dtype=np.uint8)
+            #         rec_image = rec_image.reshape(w, h, c)
+            #         cv2.imshow('Received', rec_image)
+            #         if cv2.waitKey(1) & 0xFF == ord('q'):
+            #             break
+            # ##### COMMENT THE PART ABOVE BACK IN WHEN RECONSTRUCTIONS ARE IMPLEMENTED###
 
     finally:
         cap.release()
