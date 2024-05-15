@@ -22,29 +22,3 @@ def depth_to_points(depth, K, R, t):
     pts3D_1 = M[None, None, None, ...] @ pts3D_1
     pts3D_2 = R[None, None, None, ...] @ pts3D_1 + t[None, None, None, :, None]
     return pts3D_2[:, :, :, :3, 0][0]
-
-
-# def create_triangles(h, w, mask=None):
-#     """
-#     Returns:
-#     triangles: 2D numpy array of indices (int) with shape (2(W-1)(H-1) x 3)
-#     """
-#     x, y = np.meshgrid(range(w - 1), range(h - 1))
-#     tl = y * w + x
-#     tr = y * w + x + 1
-#     bl = (y + 1) * w + x
-#     br = (y + 1) * w + x + 1
-#     triangles = np.array([tl, bl, tr, br, tr, bl])
-#     triangles = np.transpose(triangles, (1, 2, 0)).reshape(
-#         ((w - 1) * (h - 1) * 2, 3))
-#     if mask is not None:
-#         mask = mask.reshape(-1)
-#         triangles = triangles[mask[triangles].all(1)]
-#     return triangles
-
-# Tri-mesh
-# image = np.array(image)
-# verts = pts3d
-# triangles = create_triangles(image.shape[0], image.shape[1])
-# colors = image.reshape(-1, 3)
-# mesh = trimesh.Trimesh(vertices=pts3d, faces=triangles, vertex_colors=colors)
